@@ -24,6 +24,6 @@ jobs:
         run: go get -v -t -d ./...
 
       - name: Run FOSSA scan and upload build data
-        uses: fossa-contrib/fossa-action@v1
+        uses: fossas/fossa-action@v1
         with:
-          fossa-api-key: ${{secrets.FOSSA_TOKEN}}
+          api-key: ${{secrets.FOSSA_TOKEN}}
