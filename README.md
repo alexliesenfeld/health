@@ -9,9 +9,6 @@
 [![codecov](https://codecov.io/gh/alexliesenfeld/health/branch/main/graph/badge.svg?token=V2mVh8RvYE)](https://codecov.io/gh/alexliesenfeld/health)
 [![Go](https://img.shields.io/github/go-mod/go-version/alexliesenfeld/health.svg)](https://github.com/alexliesenfeld/health)
 
-
-https://img.shields.io/github/go-mod/go-version/alexliesenfeld/health.svg
-
 </div>
 
 <p align="center">
