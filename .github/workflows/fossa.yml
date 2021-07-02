@@ -1,4 +1,4 @@
-name: FOSSA
+name: License Scanning
 
 on:
   push:
@@ -7,19 +7,14 @@ on:
     branches: [ main ]
 
 jobs:
-  fossa-scan:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: "Checkout Code"
+      - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: "Run FOSSA Scan"
-        uses: fossas/fossa-action@v1
+      - name: Run FOSSA scan and upload build data
+        uses: fossa-contrib/fossa-action@v1
         with:
-          api-key: ${{secrets.FOSSA_TOKEN}}
-
-      - name: "Run FOSSA Test"
-        uses: fossas/fossa-action@v1
-        with:
-          api-key: ${{secrets.FOSSA_TOKEN}}
-          run-tests: true
+          fossa-api-key: ${{secrets.FOSSA_TOKEN}}
