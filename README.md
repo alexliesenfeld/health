@@ -141,3 +141,5 @@ Please use a proper metrics framework instead (e.g. Prometheus).
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied 
 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Public License for more details.
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Falexliesenfeld%2Fhealth.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Falexliesenfeld%2Fhealth?ref=badge_large)
