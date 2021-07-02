@@ -28,4 +28,4 @@ jobs:
         with:
           fossa-api-key: ${{secrets.FOSSA_TOKEN}}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          skip-test: true
+          skip-test: false
