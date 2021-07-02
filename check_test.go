@@ -37,3 +37,34 @@ func TestAggregateResult(t *testing.T) {
 	assert.Equal(t, true, reflect.DeepEqual(testData, result.Checks))
 	assert.Nil(t, result.Error)
 }
+
+func TestWhenNoCheckDoneThenAvailabilityStatusUnknown(t *testing.T) {
+	// Arrange
+	state := checkState{
+		lastCheckedAt: time.Time{}, // zero value
+	}
+	maxTimeInError := 10 * time.Hour // value is irrelevant for test
+	maxFails := uint(1000)           // value is irrelevant for test
+
+	// Act
+	result := evaluateAvailabilityStatus(&state, maxTimeInError, maxFails)
+
+	// Assert
+	assert.Equal(t, statusUnknown, result)
+}
+
+func TestWhenCheckErrorThenAvailabilityStatusDown(t *testing.T) {
+	// Arrange
+	state := checkState{
+		lastCheckedAt: time.Now(),
+		lastResult:    nil, // Required for the test
+	}
+	maxTimeInError := 10 * time.Hour // value is irrelevant for test
+	maxFails := uint(1000)           // value is irrelevant for test
+
+	// Act
+	result := evaluateAvailabilityStatus(&state, maxTimeInError, maxFails)
+
+	// Assert
+	assert.Equal(t, statusUp, result)
+}
