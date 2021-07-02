@@ -5,9 +5,12 @@
 <p align="center">A simple and flexible health check library for Go.</p>
 <div align="center">
 
-[![Build Status](https://github.com/alexliesenfeld/health/actions/workflows/go.yml/badge.svg)](https://github.com/alexliesenfeld/health/actions/workflows/go.yml)
-[![codecov](https://codecov.io/gh/alexliesenfeld/health/branch/main/graph/badge.svg)](https://codecov.io/gh/alexliesenfeld/health)
-[![Go](https://img.shields.io/badge/rust-1.46%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1460-2020-08-27)
+[![Build](https://github.com/alexliesenfeld/health/actions/workflows/build.yml/badge.svg)](https://github.com/alexliesenfeld/health/actions/workflows/build.yml)
+[![codecov](https://codecov.io/gh/alexliesenfeld/health/branch/main/graph/badge.svg?token=V2mVh8RvYE)](https://codecov.io/gh/alexliesenfeld/health)
+[![Go](https://img.shields.io/github/go-mod/go-version/alexliesenfeld/health.svg)](https://github.com/alexliesenfeld/health)
+
+
+https://img.shields.io/github/go-mod/go-version/alexliesenfeld/health.svg
 
 </div>
 
