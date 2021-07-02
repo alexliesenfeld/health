@@ -196,9 +196,8 @@ func toErrorDesc(err error, maxLen uint) *string {
 			errDesc = errDesc[:maxLen]
 		}
 		return &errDesc
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func evaluateAvailabilityStatus(state *checkState, maxTimeInError time.Duration, maxFails uint) availabilityStatus {
