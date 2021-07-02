@@ -1,0 +1,33 @@
+name: Codecov
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  codecov:
+    name: codecov
+    runs-on: ubuntu-latest
+    steps:
+      -
+      - name: Set up most recent version of Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.16
+        id: go
+
+      - name: Check out code
+        uses: actions/checkout@v1
+
+      - name: Generate coverage report
+        run: go test `go list ./... | grep -v examples` -coverprofile=coverage.txt -covermode=atomic
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v1.0.2
+        with:
+          token: {{your codecov token, can be found at https://codecov.io/gh/<github_username>/<repo>/settings/badge}}
+          file: ./coverage.txt
+          flags: unittests
+          name: codecov-umbrella
