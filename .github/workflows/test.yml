@@ -1,4 +1,4 @@
-name: Codecov
+name: Test
 
 on:
   push:
@@ -11,7 +11,6 @@ jobs:
     name: codecov
     runs-on: ubuntu-latest
     steps:
-      -
       - name: Set up most recent version of Go
         uses: actions/setup-go@v1
         with:
