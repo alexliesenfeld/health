@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  fossa:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,6 +23,9 @@ jobs:
 
       - name: Add GOPATH to GITHUB_PATH
         run: echo "$GOPATH/bin" >>"$GITHUB_PATH"
+
+      - name: Get dependencies
+        run: go get -v -t -d ./...
 
       - name: Run FOSSA scan and upload build data
         uses: fossa-contrib/fossa-action@v1
