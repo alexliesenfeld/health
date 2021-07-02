@@ -8,6 +8,8 @@
 [![Build](https://github.com/alexliesenfeld/health/actions/workflows/build.yml/badge.svg)](https://github.com/alexliesenfeld/health/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/alexliesenfeld/health/branch/main/graph/badge.svg?token=V2mVh8RvYE)](https://codecov.io/gh/alexliesenfeld/health)
 [![Go](https://img.shields.io/github/go-mod/go-version/alexliesenfeld/health.svg)](https://github.com/alexliesenfeld/health)
+[![Github all releases](https://img.shields.io/github/downloads/Naereen/StrapDown.js/total.svg)](https://GitHub.com/Naereen/StrapDown.js/releases/)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Falexliesenfeld%2Fhealth.svg?type=small)](https://app.fossa.com/projects/git%2Bgithub.com%2Falexliesenfeld%2Fhealth?ref=badge_small)
 
 </div>
 
