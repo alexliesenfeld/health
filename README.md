@@ -135,3 +135,9 @@ by your infrastructure and potentially solve the problem
 ## Metrics
 This library does not come with built-in metrics. Its focus is on health checks.
 Please use a proper metrics framework instead (e.g. Prometheus).
+
+## License
+`health` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied 
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Public License for more details.
