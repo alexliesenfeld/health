@@ -90,7 +90,7 @@ func WithMiddleware(hf http.HandlerFunc) option {
 // WithCustomAuth adds a custom authentication middleware so you can use you own authentication
 // functionality to integrate with this library. Parameter sendStatusOnAuthFailure=true
 // allows to pass the HTTP status code to the user even if authentication was not successful.
-// This is useful to allow publicy available health checks that do not expose system details.
+// This is useful to allow publicly available health checks that do not expose system details.
 // Example: If authentication is not successful and sendStatusOnAuthFailure=true, then HTTP status
 // code 200 (OK) will be returned in case the service is up or 503 (Service Unavailable) if the
 // service is cosidered down. On the other hand, if sendStatusOnAuthFailure=false,
@@ -109,7 +109,7 @@ func WithCustomAuth(sendStatusOnAuthFailure bool, authFunc func(r *http.Request)
 
 // WithBasicAuth adds a basic authentication middleware. Parameter sendStatusOnAuthFailure=true
 // allows to pass the HTTP status code to the user even if authentication was not successful.
-// This is useful to allow publicy available health checks that do not expose system details.
+// This is useful to allow publicly available health checks that do not expose system details.
 // Example: If authentication is not successful and sendStatusOnAuthFailure=true, then HTTP
 // status code 200 (OK) will be returned in case the service is up or 503 (Service Unavailable)
 // if the service is cosidered down. On the other hand, if sendStatusOnAuthFailure=false,
