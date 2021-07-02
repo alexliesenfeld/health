@@ -27,3 +27,5 @@ jobs:
         uses: fossa-contrib/fossa-action@v1
         with:
           fossa-api-key: ${{secrets.FOSSA_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          skip-test: true
