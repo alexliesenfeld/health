@@ -101,3 +101,15 @@ func TestWhenErrorAndAllThresholdsCrossedThenStatusDown(t *testing.T) {
 		consecutiveFails: 5,
 	})
 }
+
+func TestToErrorDescErrorShortened(t *testing.T) {
+	assert.Equal(t, "this", *toErrorDesc(fmt.Errorf("this is nice"), 4))
+}
+
+func TestToErrorDescErrorNotShortened(t *testing.T) {
+	assert.Equal(t, "this is nice", *toErrorDesc(fmt.Errorf("this is nice"), 400))
+}
+
+func TestToErrorDescNoError(t *testing.T) {
+	assert.Nil(t, toErrorDesc(nil, 400))
+}
