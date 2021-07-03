@@ -1,6 +1,7 @@
 package health
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
@@ -38,33 +39,65 @@ func TestAggregateResult(t *testing.T) {
 	assert.Nil(t, result.Error)
 }
 
-func TestWhenNoCheckDoneThenAvailabilityStatusUnknown(t *testing.T) {
-	// Arrange
-	state := checkState{
-		lastCheckedAt: time.Time{}, // zero value
-	}
-	maxTimeInError := 10 * time.Hour // value is irrelevant for test
-	maxFails := uint(1000)           // value is irrelevant for test
-
+func doTestEvaluateAvailabilityStatus(
+	t *testing.T,
+	expectedStatus availabilityStatus,
+	maxTimeInError time.Duration,
+	maxFails uint,
+	state checkState,
+) {
 	// Act
 	result := evaluateAvailabilityStatus(&state, maxTimeInError, maxFails)
 
 	// Assert
-	assert.Equal(t, statusUnknown, result)
+	assert.Equal(t, expectedStatus, result)
 }
 
-func TestWhenCheckErrorThenAvailabilityStatusDown(t *testing.T) {
-	// Arrange
-	state := checkState{
+func TestWhenNoChecksMadeYetThenStatusUnknown(t *testing.T) {
+	doTestEvaluateAvailabilityStatus(t, statusUnknown, 0, 0, checkState{
+		lastCheckedAt: time.Time{},
+	})
+}
+
+func TestWhenNoErrorThenStatusUp(t *testing.T) {
+	doTestEvaluateAvailabilityStatus(t, statusUp, 0, 0, checkState{
 		lastCheckedAt: time.Now(),
-		lastResult:    nil, // Required for the test
-	}
-	maxTimeInError := 10 * time.Hour // value is irrelevant for test
-	maxFails := uint(1000)           // value is irrelevant for test
+	})
+}
 
-	// Act
-	result := evaluateAvailabilityStatus(&state, maxTimeInError, maxFails)
+func TestWhenErrorThenStatusDown(t *testing.T) {
+	doTestEvaluateAvailabilityStatus(t, statusDown, 0, 0, checkState{
+		lastCheckedAt: time.Now(),
+		lastResult:    fmt.Errorf("example error"),
+	})
+}
 
-	// Assert
-	assert.Equal(t, statusUp, result)
+func TestWhenErrorAndMaxFailuresThresholdNotCrossedThenStatusWarn(t *testing.T) {
+	doTestEvaluateAvailabilityStatus(t, statusWarn, 1*time.Second, uint(10), checkState{
+		lastCheckedAt:    time.Now(),
+		lastResult:       fmt.Errorf("example error"),
+		startedAt:        time.Now().Add(-3 * time.Minute),
+		lastSuccessAt:    time.Now().Add(-2 * time.Minute),
+		consecutiveFails: 1,
+	})
+}
+
+func TestWhenErrorAndMaxTimeInErrorThresholdNotCrossedThenStatusWarn(t *testing.T) {
+	doTestEvaluateAvailabilityStatus(t, statusWarn, 1*time.Hour, uint(1), checkState{
+		lastCheckedAt:    time.Now(),
+		lastResult:       fmt.Errorf("example error"), // Required for the test
+		startedAt:        time.Now().Add(-3 * time.Minute),
+		lastSuccessAt:    time.Now().Add(-2 * time.Minute),
+		consecutiveFails: 100,
+	})
+}
+
+func TestWhenErrorAndAllThresholdsCrossedThenStatusDown(t *testing.T) {
+	doTestEvaluateAvailabilityStatus(t, statusDown, 1*time.Second, uint(1), checkState{
+		lastCheckedAt:    time.Now(),
+		lastResult:       fmt.Errorf("example error"), // Required for the test
+		startedAt:        time.Now().Add(-3 * time.Minute),
+		lastSuccessAt:    time.Now().Add(-2 * time.Minute),
+		consecutiveFails: 5,
+	})
 }
