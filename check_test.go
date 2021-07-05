@@ -1,6 +1,7 @@
 package health
 
 import (
+	"context"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"reflect"
@@ -30,13 +31,25 @@ func TestAggregateResult(t *testing.T) {
 	}
 
 	// Act
-	result := aggregateStatus(testData)
+	result := aggregateStatus(testData, true)
 
 	// Assert
 	assert.Equal(t, statusDown, result.Status)
 	assert.Equal(t, true, result.Timestamp.Equal(testData["check1"].Timestamp))
-	assert.Equal(t, true, reflect.DeepEqual(testData, result.Checks))
-	assert.Nil(t, result.Error)
+	assert.Equal(t, true, reflect.DeepEqual(&testData, result.Details))
+}
+
+func TestAggregateResultWithoutDetails(t *testing.T) {
+	// Arrange
+	testData := map[string]checkStatus{"check1": {Status: statusUp, Timestamp: time.Now()}}
+
+	// Act
+	result := aggregateStatus(testData, false)
+
+	// Assert
+	assert.Equal(t, statusUp, result.Status)
+	assert.Nil(t, result.Timestamp)
+	assert.Nil(t, result.Details)
 }
 
 func doTestEvaluateAvailabilityStatus(
@@ -112,4 +125,75 @@ func TestToErrorDescErrorNotShortened(t *testing.T) {
 
 func TestToErrorDescNoError(t *testing.T) {
 	assert.Nil(t, toErrorDesc(nil, 400))
+}
+
+func TestStartStopManualPeriodicChecks(t *testing.T) {
+	handler := New(
+		WithManualPeriodicCheckStart(),
+		WithPeriodicCheck(50*time.Minute, Check{
+			Name: "check",
+			Check: func(ctx context.Context) error {
+				return nil
+			},
+		})).(*healthCheckHandler)
+	assert.Equal(t, 0, len(handler.ckr.endChans), "no goroutines must be started automatically")
+
+	StartPeriodicChecks(handler)
+	assert.Equal(t, 1, len(handler.ckr.endChans), "no goroutines were started on manual start")
+
+	StopPeriodicChecks(handler)
+	assert.Equal(t, 0, len(handler.ckr.endChans), "no goroutines were stopped on manual stop")
+}
+
+func TestStartAutomaticPeriodicChecks(t *testing.T) {
+	handler := New(
+		WithPeriodicCheck(50*time.Minute, Check{
+			Name: "check",
+			Check: func(ctx context.Context) error {
+				return nil
+			},
+		})).(*healthCheckHandler)
+	assert.Equal(t, 1, len(handler.ckr.endChans), "no goroutines were started on manual start")
+
+	StopPeriodicChecks(handler)
+	assert.Equal(t, 0, len(handler.ckr.endChans), "no goroutines were stopped on manual stop")
+}
+
+func TestExecuteCheckFunc(t *testing.T) {
+	// Arrange
+	check := Check{
+		Check: func(ctx context.Context) error {
+			return nil
+		},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Hour)
+	defer cancel()
+
+	// Act
+	result := executeCheckFunc(ctx, &check)
+
+	// Assert
+	assert.Nil(t, result)
+}
+
+func TestExecuteCheckFuncWithTimeout(t *testing.T) {
+	// Arrange
+	check := Check{
+		Check: func(ctx context.Context) error {
+			select {
+			case <-ctx.Done():
+			case <-time.After(5 * time.Second):
+			}
+			return nil
+		},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	// Act
+	result := executeCheckFunc(ctx, &check)
+
+	// Assert
+	assert.NotNil(t, result)
+	assert.Equal(t, "check timed out", result.Error())
 }

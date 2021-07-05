@@ -30,7 +30,7 @@ type (
 		mtx      sync.Mutex
 		cfg      healthCheckConfig
 		state    map[string]checkState
-		endChans []chan struct{}
+		endChans []chan *sync.WaitGroup
 	}
 
 	checkResult struct {
@@ -39,13 +39,20 @@ type (
 	}
 
 	checkStatus struct {
-		Status    availabilityStatus     `json:"status"`
-		Timestamp time.Time              `json:"timestamp,omitempty"`
-		Error     *string                `json:"error,omitempty"`
-		Checks    map[string]checkStatus `json:"checks,omitempty"`
+		Status    availabilityStatus `json:"status"`
+		Timestamp time.Time          `json:"timestamp,omitempty"`
+		Error     *string            `json:"error,omitempty"`
+	}
+
+	aggregatedCheckStatus struct {
+		Status    availabilityStatus      `json:"status"`
+		Timestamp *time.Time              `json:"timestamp,omitempty"`
+		Details   *map[string]checkStatus `json:"details,omitempty"`
 	}
 
 	availabilityStatus uint
+
+	authenticationResult uint
 )
 
 const (
@@ -53,6 +60,9 @@ const (
 	statusWarn
 	statusUnknown
 	statusDown
+	authenticationSuccessful authenticationResult = iota
+	authenticationFailed
+	authenticationNotChecked
 )
 
 func (s availabilityStatus) MarshalJSON() ([]byte, error) {
@@ -66,7 +76,7 @@ func newChecker(cfg healthCheckConfig) checker {
 			startedAt: time.Now(),
 		}
 	}
-	return checker{sync.Mutex{}, cfg, state, []chan struct{}{}}
+	return checker{sync.Mutex{}, cfg, state, []chan *sync.WaitGroup{}}
 }
 
 func (ck *checker) StartPeriodicChecks() {
@@ -75,7 +85,8 @@ func (ck *checker) StartPeriodicChecks() {
 
 	for _, check := range ck.cfg.checks {
 		if isPeriodicCheck(check) {
-			endChan := make(chan struct{}, 1)
+			var wg *sync.WaitGroup
+			endChan := make(chan *sync.WaitGroup, 1)
 			ck.endChans = append(ck.endChans, endChan)
 			go func(check Check, currentState checkState) {
 			loop:
@@ -86,11 +97,12 @@ func (ck *checker) StartPeriodicChecks() {
 					ck.mtx.Unlock()
 					select {
 					case <-time.After(check.refreshInterval):
-					case <-endChan:
+					case wg = <-endChan:
 						break loop
 					}
 				}
 				close(endChan)
+				wg.Done()
 			}(*check, ck.state[check.Name])
 		}
 	}
@@ -98,14 +110,19 @@ func (ck *checker) StartPeriodicChecks() {
 
 func (ck *checker) StopPeriodicChecks() {
 	ck.mtx.Lock()
-	defer ck.mtx.Unlock()
+
+	var wg sync.WaitGroup
 	for _, endChan := range ck.endChans {
-		endChan <- struct{}{}
+		wg.Add(1)
+		endChan <- &wg
 	}
-	ck.endChans = []chan struct{}{}
+
+	ck.endChans = []chan *sync.WaitGroup{}
+	ck.mtx.Unlock()
+	wg.Wait()
 }
 
-func (ck *checker) Check(ctx context.Context) checkStatus {
+func (ck *checker) Check(ctx context.Context, includeDetails bool) aggregatedCheckStatus {
 	ck.mtx.Lock()
 	defer ck.mtx.Unlock()
 
@@ -137,7 +154,7 @@ func (ck *checker) Check(ctx context.Context) checkStatus {
 		numPendingRes--
 	}
 
-	return aggregateStatus(results)
+	return aggregateStatus(results, includeDetails)
 }
 
 func isCacheExpired(cacheDuration time.Duration, state *checkState) bool {
@@ -149,7 +166,7 @@ func isPeriodicCheck(check *Check) bool {
 }
 
 func doCheck(ctx context.Context, check Check, state checkState) checkResult {
-	ctx, cancel := ctx, func() {}
+	cancel := func() {}
 	if check.Timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, check.Timeout)
 	}
@@ -219,11 +236,11 @@ func evaluateAvailabilityStatus(state *checkState, maxTimeInError time.Duration,
 	}
 }
 
-func aggregateStatus(results map[string]checkStatus) checkStatus {
+func aggregateStatus(details map[string]checkStatus, includeDetails bool) aggregatedCheckStatus {
 	ts := time.Now()
 	status := statusUp
 
-	for _, result := range results {
+	for _, result := range details {
 		if result.Timestamp.Before(ts) {
 			ts = result.Timestamp
 		}
@@ -232,10 +249,15 @@ func aggregateStatus(results map[string]checkStatus) checkStatus {
 		}
 	}
 
-	return checkStatus{
-		status,
-		ts,
-		nil,
-		results,
+	if includeDetails {
+		return aggregatedCheckStatus{
+			status,
+			&ts,
+			&details,
+		}
+	}
+
+	return aggregatedCheckStatus{
+		Status: status,
 	}
 }

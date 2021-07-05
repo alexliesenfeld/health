@@ -11,7 +11,13 @@ type healthCheckHandler struct {
 }
 
 func (h *healthCheckHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	res := h.ckr.Check(r.Context())
+	includeDetails := true
+	userAuthenticated := getAuthResult(r.Context())
+	if userAuthenticated != nil && *userAuthenticated == false {
+		includeDetails = false
+	}
+
+	res := h.ckr.Check(r.Context(), includeDetails)
 	jsonResp, err := json.Marshal(res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -50,6 +56,7 @@ func StartPeriodicChecks(healthHandler http.Handler) {
 // (i.e. when the handler was not configured using WithManualPeriodicCheckStart) or when peridic checks have been
 // started before manually using StartPeriodicChecks. This function will have no effect otherwise.
 // It is usually not necessary to call this function manually.
+// Attention: This function does not block until all checks have been stopped!
 func StopPeriodicChecks(healthHandler http.Handler) {
 	ck := healthHandler.(*healthCheckHandler)
 	ck.ckr.StopPeriodicChecks()

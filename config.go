@@ -93,16 +93,20 @@ func WithMiddleware(hf http.HandlerFunc) option {
 // This is useful to allow publicly available health checks that do not expose system details.
 // Example: If authentication is not successful and sendStatusOnAuthFailure=true, then HTTP status
 // code 200 (OK) will be returned in case the service is up or 503 (Service Unavailable) if the
-// service is cosidered down. On the other hand, if sendStatusOnAuthFailure=false,
+// service is considered down. On the other hand, if sendStatusOnAuthFailure=false,
 // HTTP status code 401 (Unauthorized) will always be returned if authentication fails.
 func WithCustomAuth(sendStatusOnAuthFailure bool, authFunc func(r *http.Request) error) option {
 	return WithMiddlewareHandler(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if err := authFunc(r); err != nil {
-				http.Error(w, "Unauthorized", 401)
-				return
+			err := authFunc(r)
+			if err != nil {
+				if !sendStatusOnAuthFailure {
+					http.Error(w, "Unauthorized", 401)
+					return
+				}
+				r = r.WithContext(withAuthResult(r.Context(), false))
 			}
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r.WithContext(withAuthResult(r.Context(), err == nil)))
 		})
 	})
 }
