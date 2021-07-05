@@ -35,7 +35,6 @@ This library provides the following features:
 - Authentication middleware allows separating public and private health check information.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) that can be easily used with any [mux](https://golang.org/pkg/net/http/#ServeMux).
 - Failure tolerance based on fail count and/or time thresholds.
-- Aggregated system status is returned as a JSON body.
 
 This library can be used to easily integrate with the Kubernetes liveness and readiness checks.
 
@@ -84,7 +83,7 @@ The request `curl -u username:password http://localhost:3000/health` would then 
 {
    "status":"DOWN",
    "timestamp":"2021-07-01T08:05:08.522685Z",
-   "checks":{
+   "details":{
       "database":{
          "status":"DOWN",
          "timestamp":"2021-07-01T08:05:14.603364Z",
@@ -100,15 +99,19 @@ The request `curl -u username:password http://localhost:3000/health` would then 
 
 ## Caching
 Health responses are cached to avoid burdening the services that your program checks and to
-prevent "denial of service" attacks. If you do not want to use caching, you can disable it using the
-`health.WithDisabledCache()` configuration option.
+prevent "denial of service" attacks. Caching can be configured globally and/or be fine-tuned per check. 
+If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()` 
+configuration option.
 
 ## Security
-The data returned by health checks often contains sensitive data (such as service names, error messages, etc.).
-You probably do not want to expose this information to everyone. For this reason, unauthenticated requests 
-only contain the availability status of the service (HTTP response code 200, when available, or 503 if not).
-You can enable this functionality by using the built-in basic auth middleware or provide your own authentication 
-middleware:
+The data returned by health checks usually contains sensitive information (such as service names, error messages, etc.).
+You probably do not want to expose this information to everyone. For this reason, this library provides support for 
+authentication middleware that allows you to hide health details or entirely block requests based on authentication 
+success.
+
+Example: Based on the example below, the authentication middleware will respond with a JSON response body that only 
+contains the health status, and the corresponding HTTP status code 
+(in this case HTTP status code 503 and JSON response body `{ "status":"DOWN" }`).
 
 ```go
 health.New(
@@ -123,19 +126,27 @@ health.New(
 )
 ```
 
+Details, such as error messages, services names, etc. are not exposed to the caller. 
+This allows you to open health endpoints to the public but only provide details to authenticated sources.
+
 ## Failure Tolerant Checks
+This library lets you configure failure tolerant checks that allow some degree of failure up to
+predefined thresholds. The check is only considered failed, when tolerance thresholds have been crossed.
+
+### Example: 
 Let’s assume that you use a key/value store for caching, and the connection to it is checked by your application as well. 
 Your app is capable of running without the key/value store, but it will result in a slowdown. 
 If the key/value store is down, your whole application will appear unavailable. This is most likely not what you want.
 
-However, if the connection cannot be restored for a long time, there may be a serious problem that requires attention.
-In this case, you still may want to provide a failing health check, so that your app can be automatically restarted 
+If the connection cannot be restored for too long, however, there may be a serious problem that requires 
+attention. In this case, you still may want a failing health check, so that your app can be automatically restarted 
 by your infrastructure and potentially solve the problem
 (such as [Kubernetes health checks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)). 
 
+Failure tolerant checks allow you to provide this kind of behaviour.
+
 ## Metrics
 This library does not come with built-in metrics. Its focus is on health checks.
-Please use a proper metrics framework instead (e.g. Prometheus).
 
 ## License
 `health` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
