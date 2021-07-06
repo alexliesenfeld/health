@@ -129,6 +129,22 @@ health.New(
 Details, such as error messages, services names, etc. are not exposed to the caller. 
 This allows you to open health endpoints to the public but only provide details to authenticated sources.
 
+## Periodic Checks
+Rather than executing a health check function on every request that is received on the health endpoint,
+periodic checks execute the check function in a fixed interval. This allows to respond to HTTP requests
+instantly without waiting for the check function to complete. This is especially useful if you
+either (1) expect a higher request rate at the health endpoint or (2) you have checks that take a longer time
+to complete.
+
+```go
+health.New(
+	health.WithPeriodicCheck(15*time.Second, health.Check{
+		Name:    "slow-check",
+		Check:   myLongRunningCheckFunc, // your custom long running check function
+	}),
+)
+```
+
 ## Failure Tolerant Checks
 This library lets you configure failure tolerant checks that allow some degree of failure up to
 predefined thresholds. The check is only considered failed, when tolerance thresholds have been crossed.
@@ -144,6 +160,7 @@ by your infrastructure and potentially solve the problem
 (such as [Kubernetes health checks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)). 
 
 Failure tolerant checks allow you to provide this kind of behaviour.
+
 
 ## Metrics
 This library does not come with built-in metrics. Its focus is on health checks.

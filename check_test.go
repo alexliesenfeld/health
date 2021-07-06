@@ -197,3 +197,52 @@ func TestExecuteCheckFuncWithTimeout(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Equal(t, "check timed out", result.Error())
 }
+
+func TestInternalCheckWithCheckError(t *testing.T) {
+	// Arrange
+	check := Check{
+		Check: func(ctx context.Context) error {
+			return fmt.Errorf("ohi")
+		},
+	}
+	state := checkState{
+		startedAt:     time.Now().Add(-5 * time.Minute),
+		lastCheckedAt: time.Now().Add(-5 * time.Minute),
+		lastSuccessAt: time.Now().Add(-5 * time.Minute),
+	}
+
+	// Act
+	result := doCheck(context.Background(), check, state)
+
+	// Assert
+	assert.Equal(t, true, state.lastCheckedAt.Before(result.newState.lastCheckedAt))
+	assert.Equal(t, true, state.lastSuccessAt.Equal(result.newState.lastSuccessAt))
+	assert.Equal(t, true, state.startedAt.Equal(result.newState.startedAt))
+	assert.Equal(t, "UTC", result.newState.lastCheckedAt.Format("MST"))
+	assert.Equal(t, uint(1), result.newState.consecutiveFails)
+}
+
+func TestInternalCheckWithCheckSuccess(t *testing.T) {
+	// Arrange
+	check := Check{
+		Check: func(ctx context.Context) error {
+			return nil
+		},
+	}
+	state := checkState{
+		startedAt:        time.Now().Add(-5 * time.Minute),
+		lastCheckedAt:    time.Now().Add(-5 * time.Minute),
+		lastSuccessAt:    time.Now().Add(-5 * time.Minute),
+		consecutiveFails: 1000,
+	}
+
+	// Act
+	result := doCheck(context.Background(), check, state)
+
+	// Assert
+	assert.Equal(t, true, state.lastCheckedAt.Before(result.newState.lastCheckedAt))
+	assert.Equal(t, true, result.newState.lastCheckedAt.Equal(result.newState.lastCheckedAt))
+	assert.Equal(t, true, state.startedAt.Equal(result.newState.startedAt))
+	assert.Equal(t, "UTC", result.newState.lastCheckedAt.Format("MST"))
+	assert.Equal(t, uint(0), result.newState.consecutiveFails)
+}

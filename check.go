@@ -60,9 +60,6 @@ const (
 	statusWarn
 	statusUnknown
 	statusDown
-	authenticationSuccessful authenticationResult = iota
-	authenticationFailed
-	authenticationNotChecked
 )
 
 func (s availabilityStatus) MarshalJSON() ([]byte, error) {
