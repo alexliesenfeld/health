@@ -45,7 +45,7 @@ func TestWithDisabledCacheConfig(t *testing.T) {
 	WithDisabledCache()(&cfg)
 
 	// Assert
-	assert.Equal(t, 0, cfg.cacheDuration)
+	assert.Equal(t, 0*time.Second, cfg.cacheDuration)
 }
 
 func TestWithManualPeriodicCheckStartConfig(t *testing.T) {
