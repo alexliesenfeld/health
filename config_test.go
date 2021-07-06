@@ -1,10 +1,10 @@
 package health
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
@@ -59,30 +59,27 @@ func TestWithManualPeriodicCheckStartConfig(t *testing.T) {
 	assert.True(t, cfg.manualPeriodicCheckStart)
 }
 
-func TestWithTimeoutConfig(t *testing.T) {
+func TestMiddlewareConfig(t *testing.T) {
+	// Attention: This test function only tests the configuration aspect.
+	// Testing the actual middleware can be found in separate tests.
+
 	// Arrange
-	cfg := healthCheckConfig{}
-	duration := 5 * time.Hour
-	testStart := time.Now()
+	options := []option{
+		WithTimeout(5 * time.Hour),
+		WithBasicAuth("peter", "pan", true),
+		WithCustomAuth(true, func(r *http.Request) error {
+			return fmt.Errorf("auth error")
+		}),
+	}
 
-	r := httptest.NewRequest("GET", "https://example.com/foo", nil)
-	w := httptest.NewRecorder()
+	for _, opt := range options {
+		cfg := healthCheckConfig{}
 
-	// Act
-	WithTimeout(duration)(&cfg)
+		// Act
+		opt(&cfg)
 
-	// Assert
-	require.Equal(t, 1, len(cfg.middleware))
-
-	// Arrange 2
-	deadline, ok := time.Now(), false
-
-	// Act 2
-	cfg.middleware[0](http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		deadline, ok = request.Context().Deadline()
-	})).ServeHTTP(w, r)
-
-	// Assert 2
-	assert.True(t, ok)
-	assert.True(t, deadline.After(testStart.Add(duration)))
+		// Assert
+		require.Equal(t, 1, len(cfg.middleware))
+		// TODO: Refactor, so you are able to assert that the correct middleware has been configured.
+	}
 }

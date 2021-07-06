@@ -2,18 +2,11 @@ package health
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 )
 
 type (
-	// Middleware allows to define a wrapper function for HTTP handlers
-	// (sometimes referred to as "middleware" functions). This allows to
-	// preprocess and postprocess HTTP requests/responses before or after
-	// running the health checks.
-	Middleware func(next http.Handler) http.Handler
-
 	// Check allows to define all aspects of health checks.
 	Check struct {
 		// The Name must be unique among all checks. This is a required attribute.
@@ -96,19 +89,7 @@ func WithMiddleware(hf http.HandlerFunc) option {
 // service is considered down. On the other hand, if sendStatusOnAuthFailure=false,
 // HTTP status code 401 (Unauthorized) will always be returned if authentication fails.
 func WithCustomAuth(sendStatusOnAuthFailure bool, authFunc func(r *http.Request) error) option {
-	return WithMiddlewareHandler(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			err := authFunc(r)
-			if err != nil {
-				if !sendStatusOnAuthFailure {
-					http.Error(w, "Unauthorized", 401)
-					return
-				}
-				r = r.WithContext(withAuthResult(r.Context(), false))
-			}
-			next.ServeHTTP(w, r.WithContext(withAuthResult(r.Context(), err == nil)))
-		})
-	})
+	return WithMiddlewareHandler(newAuthMiddleware(sendStatusOnAuthFailure, authFunc))
 }
 
 // WithBasicAuth adds a basic authentication middleware. Parameter sendStatusOnAuthFailure=true
@@ -119,27 +100,14 @@ func WithCustomAuth(sendStatusOnAuthFailure bool, authFunc func(r *http.Request)
 // if the service is cosidered down. On the other hand, if sendStatusOnAuthFailure=false,
 // HTTP status code 401 (Unauthorized) will always be returned if authentication fails.
 func WithBasicAuth(username string, password string, sendStatusOnAuthFailure bool) option {
-	return WithCustomAuth(sendStatusOnAuthFailure, func(r *http.Request) error {
-		user, pass, _ := r.BasicAuth()
-		if user != username || pass != password {
-			return fmt.Errorf("authentication failed")
-		}
-		return nil
-	})
+	return WithMiddlewareHandler(newBasicAuthMiddleware(username, password, sendStatusOnAuthFailure))
 }
 
 // WithTimeout defines a timeout duration for all checks. You can still override
 // this timeout by using the timeout value in the Check configuration.
 // Default value is 30 seconds.
 func WithTimeout(timeout time.Duration) option {
-	return WithMiddlewareHandler(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx, cancel := context.WithTimeout(r.Context(), timeout)
-			defer cancel()
-			r = r.WithContext(ctx)
-			next.ServeHTTP(w, r)
-		})
-	})
+	return WithMiddlewareHandler(newTimeoutMiddleware(timeout))
 }
 
 // WithManualPeriodicCheckStart prevents an automatic start of periodic checks (see New).
