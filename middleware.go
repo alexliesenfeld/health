@@ -22,7 +22,6 @@ func newAuthMiddleware(sendStatusOnAuthFailure bool, authFunc func(r *http.Reque
 					http.Error(w, "Unauthorized", 401)
 					return
 				}
-				r = r.WithContext(withAuthResult(r.Context(), false))
 			}
 			next.ServeHTTP(w, r.WithContext(withAuthResult(r.Context(), err == nil)))
 		})
