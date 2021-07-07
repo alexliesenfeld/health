@@ -102,10 +102,10 @@ func TestWithMaxErrorMessageLengthConfig(t *testing.T) {
 	cfg := healthCheckConfig{}
 
 	// Act
-	WithMaxErrorMessageLength(500)(&cfg)
+	WithMaxErrorMessageLength(300)(&cfg)
 
 	// Assert
-	assert.Equal(t, uint(500), cfg.maxErrMsgLen)
+	assert.Equal(t, uint(300), cfg.maxErrMsgLen)
 }
 
 func TestNewWithDefaults(t *testing.T) {
