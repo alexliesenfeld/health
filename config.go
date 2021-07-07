@@ -54,24 +54,14 @@ func WithMaxErrorMessageLength(length uint) option {
 	}
 }
 
-// WithMiddlewareHandler allows to add a Middleware to the processing chain of HTTP requests.
+// WithMiddleware allows to add a Middleware to the processing chain of HTTP requests.
 // Middleware is a wrapper for HTTP handlers (sometimes referred to as
 // "middleware" functions). This allows to preprocess and postprocess HTTP
 // requests/responses before or after running the health checks.
-func WithMiddlewareHandler(mw Middleware) option {
+func WithMiddleware(mw Middleware) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.middleware = append(cfg.middleware, mw)
 	}
-}
-
-// WithMiddleware allows to add a Middleware to the processing chain of HTTP requests.
-// Middleware is a wrapper function for HTTP handlers (sometimes referred to as
-// "middleware" functions). This allows to preprocess and postprocess HTTP
-// requests/responses before or after running the health checks.
-func WithMiddleware(hf http.HandlerFunc) option {
-	return WithMiddlewareHandler(func(h http.Handler) http.Handler {
-		return http.HandlerFunc(hf)
-	})
 }
 
 // WithCustomAuth adds a custom authentication middleware so you can use you own authentication
@@ -83,7 +73,7 @@ func WithMiddleware(hf http.HandlerFunc) option {
 // service is considered down. On the other hand, if sendStatusOnAuthFailure=false,
 // HTTP status code 401 (Unauthorized) will always be returned if authentication fails.
 func WithCustomAuth(sendStatusOnAuthFailure bool, authFunc func(r *http.Request) error) option {
-	return WithMiddlewareHandler(newAuthMiddleware(sendStatusOnAuthFailure, authFunc))
+	return WithMiddleware(newAuthMiddleware(sendStatusOnAuthFailure, authFunc))
 }
 
 // WithBasicAuth adds a basic authentication middleware. Parameter sendStatusOnAuthFailure=true
@@ -94,14 +84,14 @@ func WithCustomAuth(sendStatusOnAuthFailure bool, authFunc func(r *http.Request)
 // if the service is cosidered down. On the other hand, if sendStatusOnAuthFailure=false,
 // HTTP status code 401 (Unauthorized) will always be returned if authentication fails.
 func WithBasicAuth(username string, password string, sendStatusOnAuthFailure bool) option {
-	return WithMiddlewareHandler(newBasicAuthMiddleware(username, password, sendStatusOnAuthFailure))
+	return WithMiddleware(newBasicAuthMiddleware(username, password, sendStatusOnAuthFailure))
 }
 
 // WithTimeout defines a timeout duration for all checks. You can still override
 // this timeout by using the timeout value in the Check configuration.
 // Default value is 30 seconds.
 func WithTimeout(timeout time.Duration) option {
-	return WithMiddlewareHandler(newTimeoutMiddleware(timeout))
+	return WithMiddleware(newTimeoutMiddleware(timeout))
 }
 
 // WithManualPeriodicCheckStart prevents an automatic start of periodic checks (see New).

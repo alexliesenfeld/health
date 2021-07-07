@@ -28,6 +28,19 @@ func TestWithPeriodicCheckConfig(t *testing.T) {
 func TestWithCheckConfig(t *testing.T) {
 	// Arrange
 	cfg := healthCheckConfig{}
+	check := Check{Name: "test"}
+
+	// Act
+	WithCheck(check)(&cfg)
+
+	// Assert
+	require.Equal(t, 1, len(cfg.checks))
+	assert.True(t, reflect.DeepEqual(&check, cfg.checks[0]))
+}
+
+func TestWithCacheDurationConfig(t *testing.T) {
+	// Arrange
+	cfg := healthCheckConfig{}
 	duration := 5 * time.Hour
 
 	// Act
@@ -59,7 +72,7 @@ func TestWithManualPeriodicCheckStartConfig(t *testing.T) {
 	assert.True(t, cfg.manualPeriodicCheckStart)
 }
 
-func TestMiddlewareConfig(t *testing.T) {
+func TestAuthMiddlewareConfig(t *testing.T) {
 	// Attention: This test function only tests the configuration aspect.
 	// Testing the actual middleware can be found in separate tests.
 
@@ -82,4 +95,31 @@ func TestMiddlewareConfig(t *testing.T) {
 		require.Equal(t, 1, len(cfg.middleware))
 		// TODO: Refactor, so you are able to assert that the correct middleware has been configured.
 	}
+}
+
+func TestWithMaxErrorMessageLengthConfig(t *testing.T) {
+	// Arrange
+	cfg := healthCheckConfig{}
+
+	// Act
+	WithMaxErrorMessageLength(500)(&cfg)
+
+	// Assert
+	assert.Equal(t, uint(500), cfg.maxErrMsgLen)
+}
+
+func TestNewWithDefaults(t *testing.T) {
+	// Arrange
+	configApplied := false
+	opt := func(config *healthCheckConfig) { configApplied = true }
+
+	// Act
+	handler := New(opt)
+
+	// Assert
+	ckr := handler.(*healthCheckHandler).ckr.(*defaultChecker)
+	assert.Equal(t, 1*time.Second, ckr.cfg.cacheDuration)
+	assert.Equal(t, 30*time.Second, ckr.cfg.timeout)
+	assert.Equal(t, uint(500), ckr.cfg.maxErrMsgLen)
+	assert.True(t, configApplied)
 }
