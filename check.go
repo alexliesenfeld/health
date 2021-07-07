@@ -51,8 +51,6 @@ type (
 	}
 
 	availabilityStatus uint
-
-	authenticationResult uint
 )
 
 const (

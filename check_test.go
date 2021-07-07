@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
 	"time"
@@ -245,4 +246,48 @@ func TestInternalCheckWithCheckSuccess(t *testing.T) {
 	assert.Equal(t, true, state.startedAt.Equal(result.newState.startedAt))
 	assert.Equal(t, "UTC", result.newState.lastCheckedAt.Format("MST"))
 	assert.Equal(t, uint(0), result.newState.consecutiveFails)
+}
+
+func doTestCheckerCheckFunc(t *testing.T, refreshInterval time.Duration, err error, expectedStatus availabilityStatus) {
+	// Arrange
+	checks := []*Check{
+		{
+			Name: "check1",
+			Check: func(ctx context.Context) error {
+				return nil
+			},
+		},
+		{
+			Name: "check2",
+			Check: func(ctx context.Context) error {
+				return err
+			},
+			refreshInterval: refreshInterval,
+		},
+	}
+
+	ckr := newChecker(healthCheckConfig{checks: checks})
+
+	// Act
+	res := ckr.Check(context.Background(), true)
+
+	// Assert
+	require.NotNil(t, res.Details)
+	assert.Equal(t, res.Status, expectedStatus)
+	for _, ck := range checks {
+		_, checkResultExists := (*res.Details)[ck.Name]
+		assert.True(t, checkResultExists)
+	}
+}
+
+func TestWhenChecksExecutedThenAggregatedResultUp(t *testing.T) {
+	doTestCheckerCheckFunc(t, 0, nil, statusUp)
+}
+
+func TestWhenOneCheckFailedThenAggregatedResultDown(t *testing.T) {
+	doTestCheckerCheckFunc(t, 0, fmt.Errorf("this is a check error"), statusDown)
+}
+
+func TestCheckSuccessNotAllChecksExecutedYet(t *testing.T) {
+	doTestCheckerCheckFunc(t, 5*time.Hour, nil, statusUnknown)
 }
