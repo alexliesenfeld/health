@@ -26,7 +26,7 @@ type (
 		consecutiveFails uint
 	}
 
-	checker struct {
+	defaultChecker struct {
 		mtx      sync.Mutex
 		cfg      healthCheckConfig
 		state    map[string]checkState
@@ -64,17 +64,21 @@ func (s availabilityStatus) MarshalJSON() ([]byte, error) {
 	return json.Marshal([...]string{"UP", "WARN", "UNKNOWN", "DOWN"}[s])
 }
 
-func newChecker(cfg healthCheckConfig) checker {
+func newChecker(cfg healthCheckConfig) *defaultChecker {
 	state := map[string]checkState{}
 	for _, check := range cfg.checks {
 		state[check.Name] = checkState{
 			startedAt: time.Now(),
 		}
 	}
-	return checker{sync.Mutex{}, cfg, state, []chan *sync.WaitGroup{}}
+	ckr := defaultChecker{sync.Mutex{}, cfg, state, []chan *sync.WaitGroup{}}
+	if !cfg.manualPeriodicCheckStart {
+		ckr.StartPeriodicChecks()
+	}
+	return &ckr
 }
 
-func (ck *checker) StartPeriodicChecks() {
+func (ck *defaultChecker) StartPeriodicChecks() {
 	ck.mtx.Lock()
 	defer ck.mtx.Unlock()
 
@@ -103,7 +107,7 @@ func (ck *checker) StartPeriodicChecks() {
 	}
 }
 
-func (ck *checker) StopPeriodicChecks() {
+func (ck *defaultChecker) StopPeriodicChecks() {
 	ck.mtx.Lock()
 
 	var wg sync.WaitGroup
@@ -117,7 +121,7 @@ func (ck *checker) StopPeriodicChecks() {
 	wg.Wait()
 }
 
-func (ck *checker) Check(ctx context.Context, includeDetails bool) aggregatedCheckStatus {
+func (ck *defaultChecker) Check(ctx context.Context, includeDetails bool) aggregatedCheckStatus {
 	ck.mtx.Lock()
 	defer ck.mtx.Unlock()
 

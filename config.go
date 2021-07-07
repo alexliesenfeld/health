@@ -43,13 +43,7 @@ func New(options ...option) http.Handler {
 		option(&cfg)
 	}
 
-	ckr := newChecker(cfg)
-
-	if !cfg.manualPeriodicCheckStart {
-		ckr.StartPeriodicChecks()
-	}
-
-	return newHandler(cfg.middleware, ckr)
+	return newHandler(cfg.middleware, newChecker(cfg))
 }
 
 // WithMaxErrorMessageLength limits maximum number of characters

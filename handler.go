@@ -1,14 +1,23 @@
 package health
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 )
 
-type healthCheckHandler struct {
-	http.Handler
-	ckr checker
-}
+type (
+	healthCheckHandler struct {
+		http.Handler
+		ckr checker
+	}
+
+	checker interface {
+		StartPeriodicChecks()
+		StopPeriodicChecks()
+		Check(ctx context.Context, includeDetails bool) aggregatedCheckStatus
+	}
+)
 
 func (h *healthCheckHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	includeDetails := true

@@ -129,35 +129,43 @@ func TestToErrorDescNoError(t *testing.T) {
 }
 
 func TestStartStopManualPeriodicChecks(t *testing.T) {
-	handler := New(
-		WithManualPeriodicCheckStart(),
-		WithPeriodicCheck(50*time.Minute, Check{
-			Name: "check",
-			Check: func(ctx context.Context) error {
-				return nil
+	ckr := newChecker(healthCheckConfig{
+		manualPeriodicCheckStart: true,
+		checks: []*Check{
+			{
+				Name: "check",
+				Check: func(ctx context.Context) error {
+					return nil
+				},
+				refreshInterval: 50 * time.Minute,
 			},
-		})).(*healthCheckHandler)
-	assert.Equal(t, 0, len(handler.ckr.endChans), "no goroutines must be started automatically")
+		}})
 
-	StartPeriodicChecks(handler)
-	assert.Equal(t, 1, len(handler.ckr.endChans), "no goroutines were started on manual start")
+	assert.Equal(t, 0, len(ckr.endChans), "no goroutines must be started automatically")
 
-	StopPeriodicChecks(handler)
-	assert.Equal(t, 0, len(handler.ckr.endChans), "no goroutines were stopped on manual stop")
+	ckr.StartPeriodicChecks()
+	assert.Equal(t, 1, len(ckr.endChans), "no goroutines were started on manual start")
+
+	ckr.StopPeriodicChecks()
+	assert.Equal(t, 0, len(ckr.endChans), "no goroutines were stopped on manual stop")
 }
 
 func TestStartAutomaticPeriodicChecks(t *testing.T) {
-	handler := New(
-		WithPeriodicCheck(50*time.Minute, Check{
-			Name: "check",
-			Check: func(ctx context.Context) error {
-				return nil
+	ckr := newChecker(healthCheckConfig{
+		manualPeriodicCheckStart: false,
+		checks: []*Check{
+			{
+				Name: "check",
+				Check: func(ctx context.Context) error {
+					return nil
+				},
+				refreshInterval: 50 * time.Minute,
 			},
-		})).(*healthCheckHandler)
-	assert.Equal(t, 1, len(handler.ckr.endChans), "no goroutines were started on manual start")
+		}})
+	assert.Equal(t, 1, len(ckr.endChans), "no goroutines were started on manual start")
 
-	StopPeriodicChecks(handler)
-	assert.Equal(t, 0, len(handler.ckr.endChans), "no goroutines were stopped on manual stop")
+	ckr.StopPeriodicChecks()
+	assert.Equal(t, 0, len(ckr.endChans), "no goroutines were stopped on manual stop")
 }
 
 func TestExecuteCheckFunc(t *testing.T) {
