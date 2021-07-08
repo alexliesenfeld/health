@@ -7,10 +7,8 @@ import (
 	"time"
 )
 
-// Middleware allows to define a wrapper function for HTTP handlers
-// (sometimes referred to as "middleware" functions). This allows to
-// preprocess and postprocess HTTP requests/responses before or after
-// running the health checks.
+// Middleware allows to define a wrapper function for HTTP handlers. This allows to
+// pre- and postprocess HTTP requests/responses before and/or after running health checks.
 type Middleware func(next http.Handler) http.Handler
 
 func newAuthMiddleware(sendStatusOnAuthFailure bool, authFunc func(r *http.Request) error) Middleware {
