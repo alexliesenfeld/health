@@ -137,9 +137,12 @@ func WithCheck(check Check) option {
 
 // WithPeriodicCheck adds a new health check that contributes to the overall service availability status.
 // The health check will be performed on a fixed schedule and will not be executed for each HTTP request
-// any more (as in contrast to WithCheck). The result in between checks is cached and provided as a result
-// for HTTP requests to the health HTTP endpoint. This allows to process a much higher number of HTTP requests
-// without actually calling the checked services too often.
+// (as in contrast to WithCheck). This allows to process a much higher number of HTTP requests without
+// actually calling the checked services too often or to execute long running checks.
+// The health endpoint always returns the last result of the periodic check.
+// When periodic checks are started (happens automatically if WithManualPeriodicCheckStart is not used)
+// they are also executed for the first time. Until all periodic checks have not been executed at least once,
+// the overall availability status will be "UNKNOWN" with HTTP status code 503 (Service Unavailable).
 func WithPeriodicCheck(refreshPeriod time.Duration, check Check) option {
 	return func(cfg *healthCheckConfig) {
 		check.refreshInterval = refreshPeriod
