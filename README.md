@@ -77,7 +77,7 @@ func main() {
 				// For brevity, no error handling or reading from response body.
 				url := "https://www.google.com"
 				req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-				_, err :=  http.DefaultClient.Do(req)
+				_, err := http.DefaultClient.Do(req)
 				return err
 			},
 		}),
