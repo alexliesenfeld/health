@@ -72,13 +72,11 @@ func main() {
 		// The following check will be executed periodically every 30 seconds.
 		health.WithPeriodicCheck(30*time.Second, health.Check{  
 			Name: "search",
-			Timeout: 5*time.Second, // A check specific timeout.
+			Timeout: 2*time.Second, // A check specific timeout.
 			Check: func(ctx context.Context) error {
-				// For brevity, no error handling or reading from response body.
-				url := "https://www.google.com"
-				req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-				_, err := http.DefaultClient.Do(req)
-				return err
+				// This will cause a timeout
+				time.Sleep(3 * time.Second)
+				return nil
 			},
 		}),
 	))
@@ -87,8 +85,8 @@ func main() {
 }
 ```
 
-The request `curl -u username:password http://localhost:3000/health` would then yield a response with HTTP status code 
-`503 (Service Unavailable)`, and the following JSON response body:
+If our database is down, the request `curl -u username:password http://localhost:3000/health` would 
+yield a response with HTTP status code `503 (Service Unavailable)`, and the following JSON response body:
 
 ```json
 {
@@ -96,13 +94,13 @@ The request `curl -u username:password http://localhost:3000/health` would then 
    "timestamp": "2021-07-01T08:05:08.522685Z",
    "details":{
       "database": {
-         "status": "DOWN",
-         "timestamp": "2021-07-01T08:05:14.603364Z",
-         "error": "check timed out"
+         "status": "UP",
+         "timestamp": "2021-07-01T08:05:14.603364Z"
       },
       "search": {
-         "status": "UP",
-         "timestamp": "2021-07-01T08:05:08.522685Z"
+         "status": "DOWN",
+         "timestamp": "2021-07-01T08:05:08.522685Z",
+          "error": "check timed out"
       }
    }
 }
