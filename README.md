@@ -105,37 +105,6 @@ yield a response with HTTP status code `503 (Service Unavailable)`, and the foll
 }
 ```
 
-## Caching
-Health responses are cached to avoid burdening the services that your program checks with too many requests
-and to mitigate "denial of service" attacks. Caching can be configured globally and/or be fine-tuned per check. 
-If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()` 
-configuration option.
-
-## Security
-The data that is returned as part of health check results usually contains sensitive information 
-(such as service names, error messages, etc.). You probably do not want to expose this information to everyone. 
-For this reason, this library provides support for authentication middleware that allows you to hide health details 
-or entirely block requests based on authentication success.
-
-### Example
-In the example below, we configure a [basic auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication)
-middleware that expects a username and password in each HTTP request. If authentication fails, it will respond 
-with HTTP status code `503 (Service Unavailable)` and a JSON body that only contains the aggregated health status 
-(`{ "status":"DOWN" }`).
-
-```go
-health.NewHandler(
-	health.WithBasicAuth("username", "password", true),
-	health.WithCheck(health.Check{
-		Name:    "database",
-		Check: db.PingContext,
-	}), 
-)
-```
-
-Details, such as error messages, services names, etc. are not exposed to the caller. 
-This allows you to open health endpoints to the public but only provide details to authenticated sources.
-
 ## Periodic Checks
 Rather than executing a health check function on every request that is received over the health endpoint,
 periodic checks execute the check function on a fixed schedule. This allows to respond to HTTP requests
@@ -150,6 +119,37 @@ health.NewHandler(
 	}),
 )
 ```
+
+## Caching
+Health responses are cached to avoid burdening the services that your program checks with too many requests
+and to mitigate "denial of service" attacks. Caching can be configured globally and/or be fine-tuned per check.
+If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()`
+configuration option.
+
+## Security
+The data that is returned as part of health check results usually contains sensitive information
+(such as service names, error messages, etc.). You probably do not want to expose this information to everyone.
+For this reason, this library provides support for authentication middleware that allows you to hide health details
+or entirely block requests based on authentication success.
+
+### Example
+In the example below, we configure a [basic auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication)
+middleware that expects a username and password in each HTTP request. If authentication fails, it will respond
+with HTTP status code `503 (Service Unavailable)` and a JSON body that only contains the aggregated health status
+(`{ "status":"DOWN" }`).
+
+```go
+health.NewHandler(
+	health.WithBasicAuth("username", "password", true),
+	health.WithCheck(health.Check{
+		Name:    "database",
+		Check: db.PingContext,
+	}), 
+)
+```
+
+Details, such as error messages, services names, etc. are not exposed to the caller.
+This allows you to open health endpoints to the public but only provide details to authenticated sources.
 
 ## Failure Tolerant Checks
 This library lets you configure failure tolerant checks that allow some degree of failure. The check is only 
