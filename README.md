@@ -74,8 +74,7 @@ func main() {
 			Name: "search",
 			Timeout: 5*time.Second, // A check specific timeout.
 			Check: func(ctx context.Context) error {
-				// For brevity, no proper error handling or reading/closing 
-				// the response body stream.
+				// For brevity, no error handling or reading from response body.
 				url := "https://www.google.com"
 				req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 				_, err :=  http.DefaultClient.Do(req)
