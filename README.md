@@ -28,7 +28,7 @@ check if all necessary components are healthy.
 This library provides the following features:
 
 - Request based and fixed-schedule health checks.
-- Request and check-based timeout management.
+- Global and check-based timeout management.
 - Caching support to unburden checked systems during load peeks.
 - Custom HTTP request middleware to pre- and postprocess HTTP requests and/or responses.
 - Authentication middleware allows separating public and private health check information.
