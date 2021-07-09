@@ -22,8 +22,8 @@
 </p>
 
 ## Features
-This library allows you to build health checks that do not simply return 200 HTTP status codes but actually 
-check if the systems that your app requires to work are available.
+This library allows you to build health checks that do not simply return HTTP status code 200 but actually 
+check if all necessary components are healthy.
 
 This library provides the following features:
 
