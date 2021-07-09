@@ -118,9 +118,10 @@ For this reason, this library provides support for authentication middleware tha
 or entirely block requests based on authentication success.
 
 ### Example
-Based on the example below, the authentication middleware will respond with a JSON response body that only 
-contains the health status, and the corresponding HTTP status code (in this case HTTP status code 
-`503 (Service Unavailable)` and JSON response body `{ "status":"DOWN" }`).
+In the example below, we configure a [basic auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication)
+middleware that expects a username and password in each HTTP request. If authentication fails, it will respond 
+with HTTP status code `503 (Service Unavailable)` and a JSON body that only contains the aggregated health status 
+(`{ "status":"DOWN" }`).
 
 ```go
 health.NewHandler(
