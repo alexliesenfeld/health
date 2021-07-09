@@ -32,8 +32,8 @@ This library provides the following features:
 - Custom HTTP request middleware for pre- and postprocessing HTTP requests and/or responses.
 - Failure tolerance based on fail count and/or time thresholds.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) that can be easily used with a [mux](https://golang.org/pkg/net/http/#ServeMux).
-- Caching.
 - Authentication middleware that allows to hide sensitive information from the public.
+- Caching.
 
 ## Example
 ```go
