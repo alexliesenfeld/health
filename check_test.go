@@ -36,7 +36,7 @@ func TestAggregateResult(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, statusDown, result.Status)
-	assert.Equal(t, true, result.Timestamp.Equal(testData["check1"].Timestamp))
+	assert.Equal(t, true, result.Timestamp.Equal(testData["check3"].Timestamp))
 	assert.Equal(t, true, reflect.DeepEqual(&testData, result.Details))
 }
 
