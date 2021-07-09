@@ -84,7 +84,8 @@ func main() {
 }
 ```
 
-The request `curl -u username:password http://localhost:3000/health` would then yield the following result:
+The request `curl -u username:password http://localhost:3000/health` would then yield a response with HTTP status code 
+`503 (Service Unavailable)`, and the following JSON response body:
 
 ```json
 {
