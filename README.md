@@ -153,7 +153,7 @@ is down, your app can still serve API requests, but it will not process any mess
 If the Kafka health check is configured without any failure tolerance, and the connection to Kafka is temporarily down, 
 your whole application will look unhealthy in health checks. This is most likely not what you want. 
 However, if Kafka is down for too long, there may indeed be a problem that requires attention. In this case, 
-you still may want to flag your app unhealthy by returning a failing health check, so that your app can be 
+you still may want to flag your app unhealthy by returning a failing health check, so that it can be 
 automatically restarted by your infrastructure. 
 
 To allow some degree of failure tolerance, please have a look at the `FailureTolerance` and `FailureToleranceThreshold` 
