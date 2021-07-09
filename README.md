@@ -42,6 +42,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/alexliesenfeld/health"
 	_ "github.com/mattn/go-sqlite3"
 	"net/http"
@@ -66,17 +67,15 @@ func main() {
 		// A simple check to see if database connection is up.
 		health.WithCheck(health.Check{                          
 			Name:  "database",
+			Timeout: 2*time.Second, // A check specific timeout.
 			Check: db.PingContext,
 		}),
 		
 		// The following check will be executed periodically every 30 seconds.
 		health.WithPeriodicCheck(30*time.Second, health.Check{  
 			Name: "search",
-			Timeout: 2*time.Second, // A check specific timeout.
 			Check: func(ctx context.Context) error {
-				// This will cause a timeout
-				time.Sleep(3 * time.Second)
-				return nil
+				return fmt.Errorf("this makes the check fail")
 			},
 		}),
 	))
@@ -100,7 +99,7 @@ yield a response with HTTP status code `503 (Service Unavailable)`, and the foll
       "search": {
          "status": "DOWN",
          "timestamp": "2021-07-01T08:05:08.522685Z",
-          "error": "check timed out"
+          "error": "this makes the check fail"
       }
    }
 }
