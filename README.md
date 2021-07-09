@@ -123,7 +123,8 @@ health.NewHandler(
 ## Caching
 Health responses are cached to avoid burdening the services that your program checks with too many requests
 and to mitigate "denial of service" attacks. Caching can be configured globally and/or be fine-tuned per check.
-If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()`
+The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set to 1 second by default. 
+If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()` 
 configuration option.
 
 ## Security
