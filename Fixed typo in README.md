@@ -57,7 +57,7 @@ func main() {
 	// Create a new http.Handler that provides health check information.
 	router.Handle("/health", health.NewHandler(
 		
-		// Configure a globally configured timeout that will be applied to all checks.
+		// Configure a global timeout that will be applied to all checks.
 		health.WithTimeout(10*time.Second),
 		
 		// Our health endpoint requires authentication.
