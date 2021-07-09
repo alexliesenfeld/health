@@ -12,16 +12,17 @@ type (
 		// The Name must be unique among all checks. Name is a required attribute.
 		Name string
 		// Check is the check function that will be executed to check availability.
-		// This function must return an error if the checked service is considered not available.
-		// Check is a required attribute.
+		// This function must return an error if the checked service is considered
+		// not available. Check is a required attribute.
 		Check func(ctx context.Context) error
-		// Timeout will override the global timeout value, if it is smaller than the global timeout (see WithTimeout).
+		// Timeout will override the global timeout value, if it is smaller than
+		// the global timeout (see WithTimeout).
 		Timeout time.Duration
-		// FailureTolerance will set a duration for how long a service must be "in error" until it
-		// is considered unavailable.
+		// FailureTolerance will set a duration for how long a service must be
+		// "in error" until it is considered unavailable.
 		FailureTolerance time.Duration
-		// FailureToleranceThreshold will set a maximum number of consecutive check fails until the service
-		// is considered unavailable.
+		// FailureToleranceThreshold will set a maximum number of consecutive
+		// check fails until the service is considered unavailable.
 		FailureToleranceThreshold uint
 		refreshInterval           time.Duration
 	}
