@@ -124,10 +124,7 @@ contains the health status, and the corresponding HTTP status code (in this case
 
 ```go
 health.NewHandler(
-	health.WithBasicAuth("username", "password", true), 
-	health.WithCustomAuth(true, func(r *http.Request) error {
-		return fmt.Errorf("this simulates authentication failure")
-	}), 
+	health.WithBasicAuth("username", "password", true),
 	health.WithCheck(health.Check{
 		Name:    "database",
 		Check: db.PingContext,
