@@ -147,16 +147,17 @@ health.NewHandler(
 This library lets you configure failure tolerant checks that allow some degree of failure. The check is only 
 considered failed, when tolerance thresholds have been crossed.
 
-### Example: 
+### Example
 Let's assume that your app provides a REST API but also consumes messages from a Kafka topic. If the connection to Kafka
 is down, your app can still serve API requests, but it will not process any messages during this time.
 If the Kafka health check is configured without any failure tolerance, and the connection to Kafka is temporarily down, 
-your whole application will be considered unavailable. This is most likely not what you want. 
+your whole application will look unhealthy in health checks. This is most likely not what you want. 
 However, if Kafka is down for too long, there may indeed be a problem that requires attention. In this case, 
 you still may want to flag your app unhealthy by returning a failing health check, so that your app can be 
-automatically restarted by your infrastructure. In this case, you can allow some degree of failure tolerance in your
-[check config](https://pkg.go.dev/github.com/alexliesenfeld/health#Check) 
-(see attribute `FailureTolerance` and `FailureToleranceThreshold`).
+automatically restarted by your infrastructure. 
+
+To allow some degree of failure tolerance, please have a look at the `FailureTolerance` and `FailureToleranceThreshold` 
+attributes in your [check configuration](https://pkg.go.dev/github.com/alexliesenfeld/health#Check).
 
 ## License
 `health` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
