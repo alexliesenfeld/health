@@ -35,6 +35,10 @@ func (h *healthCheckHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(mapHTTPStatus(res.Status))
 	w.Header().Set("content-type", "application/json; charset=utf-8")
+	// The response must be explicitly defined as "noncacheable"
+	// to avoid returning an incorrect status as a result of caching network equipment.
+	// refer to https://www.ibm.com/garage/method/practices/manage/health-check-apis/
+	w.Header().Set("cache-control", "no-cache")
 	w.Write(jsonResp)
 }
 
