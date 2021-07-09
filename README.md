@@ -117,7 +117,8 @@ The data that is returned as part of health check results usually contains sensi
 For this reason, this library provides support for authentication middleware that allows you to hide health details 
 or entirely block requests based on authentication success.
 
-Example: Based on the example below, the authentication middleware will respond with a JSON response body that only 
+### Example
+Based on the example below, the authentication middleware will respond with a JSON response body that only 
 contains the health status, and the corresponding HTTP status code (in this case HTTP status code 503 and JSON response 
 body `{ "status":"DOWN" }`).
 
