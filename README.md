@@ -72,7 +72,7 @@ func main() {
 		// The following check will be executed periodically every 30 seconds.
 		health.WithPeriodicCheck(30*time.Second, health.Check{  
 			Name: "search",
-			Timeout: 5*time.Second, // This is a check specific timeout (smaller than global).
+			Timeout: 5*time.Second, // A check specific timeout.
 			Check: func(ctx context.Context) error {
 				_, err := http.Get("https://www.google.com")
 				return err
