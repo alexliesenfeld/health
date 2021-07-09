@@ -35,8 +35,6 @@ This library provides the following features:
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) that can be easily used with any [mux](https://golang.org/pkg/net/http/#ServeMux).
 - Failure tolerance based on fail count and/or time thresholds.
 
-This library can be used to integrate with the Kubernetes liveness and readiness checks.
-
 ## Example
 ```go
 package main
