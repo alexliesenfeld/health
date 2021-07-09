@@ -30,7 +30,7 @@ This library provides the following features:
 - Request based and fixed-schedule health checks.
 - Request and check-based timeout management.
 - Caching support to unburden checked systems during load peeks.
-- Custom HTTP request middleware to pre- and postprocess requests.
+- Custom HTTP request middleware to pre- and postprocess HTTP requests and/or responses.
 - Authentication middleware allows separating public and private health check information.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) that can be easily used with any [mux](https://golang.org/pkg/net/http/#ServeMux).
 - Failure tolerance based on fail count and/or time thresholds.
