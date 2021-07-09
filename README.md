@@ -55,7 +55,7 @@ func main() {
 	defer db.Close()
 
 	router := http.NewServeMux()
-	router.Handle("/health", health.New(
+	router.Handle("/health", health.NewHandler(
 		health.WithTimeout(10*time.Second),
 		health.WithBasicAuth("username", "password", true),
 		health.WithCheck(health.Check{
@@ -113,7 +113,7 @@ contains the health status, and the corresponding HTTP status code (in this case
 body `{ "status":"DOWN" }`).
 
 ```go
-health.New(
+health.NewHandler(
 	health.WithBasicAuth("username", "password", true), 
 	health.WithCustomAuth(true, func(r *http.Request) error {
 		return fmt.Errorf("this simulates authentication failure")
@@ -135,7 +135,7 @@ instantly without waiting for the check function to complete. This is especially
 either expect a higher request rate on the health endpoint, or your checks take a relatively long time to complete.
 
 ```go
-health.New(
+health.NewHandler(
 	health.WithPeriodicCheck(15*time.Second, health.Check{
 		Name:    "slow-check",
 		Check:   myLongRunningCheckFunc, // your custom long running check function

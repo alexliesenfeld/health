@@ -114,7 +114,7 @@ func TestNewWithDefaults(t *testing.T) {
 	opt := func(config *healthCheckConfig) { configApplied = true }
 
 	// Act
-	handler := New(opt)
+	handler := NewHandler(opt)
 
 	// Assert
 	ckr := handler.(*healthCheckHandler).ckr.(*defaultChecker)

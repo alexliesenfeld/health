@@ -29,10 +29,10 @@ type (
 	option func(*healthCheckConfig)
 )
 
-// New creates a new health check http.Handler. If periodic checks have
+// NewHandler creates a new health check http.Handler. If periodic checks have
 // been configured (see WithPeriodicCheck), they will be started as well
 // (if not explicitly turned off using WithManualPeriodicCheckStart).
-func New(options ...option) http.Handler {
+func NewHandler(options ...option) http.Handler {
 	cfg := healthCheckConfig{
 		cacheDuration: 1 * time.Second,
 		timeout:       30 * time.Second,
@@ -98,7 +98,7 @@ func WithTimeout(timeout time.Duration) option {
 	return WithMiddleware(newTimeoutMiddleware(timeout))
 }
 
-// WithManualPeriodicCheckStart prevents an automatic start of periodic checks (see New).
+// WithManualPeriodicCheckStart prevents an automatic start of periodic checks (see NewHandler).
 // If this configuation option is used and you want to start periodic checks yourself,
 // you need to start them by using StartPeriodicChecks.
 func WithManualPeriodicCheckStart() option {
