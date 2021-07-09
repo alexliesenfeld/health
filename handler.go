@@ -33,13 +33,19 @@ func (h *healthCheckHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	disableResponseCache(w)
 	w.WriteHeader(mapHTTPStatus(res.Status))
-	w.Header().Set("content-type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Write(jsonResp)
+}
+
+func disableResponseCache(w http.ResponseWriter) {
 	// The response must be explicitly defined as "noncacheable"
 	// to avoid returning an incorrect status as a result of caching network equipment.
 	// refer to https://www.ibm.com/garage/method/practices/manage/health-check-apis/
-	w.Header().Set("cache-control", "no-cache")
-	w.Write(jsonResp)
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "-1")
 }
 
 func newHandler(middlewares []Middleware, ckr checker) http.Handler {
