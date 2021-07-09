@@ -53,17 +53,21 @@ func main() {
 	defer db.Close()
 
 	router := http.NewServeMux()
+	
 	// Create a new new http.Handler that provides health check information.
 	router.Handle("/health", health.NewHandler(
 		// Configure a globally configured timeout that will be applied to all checks.
 		health.WithTimeout(10*time.Second),
+		
 		// Our health endpoint requires authentication.
 		health.WithBasicAuth("username", "password", true),
+		
 		// A simple check to see if database connection is up.
 		health.WithCheck(health.Check{                          
 			Name:  "database",
 			Check: db.PingContext,
 		}),
+		
 		// The following check will be executed periodically every 30 seconds.
 		health.WithPeriodicCheck(30*time.Second, health.Check{  
 			Name: "search",
