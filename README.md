@@ -88,17 +88,17 @@ The request `curl -u username:password http://localhost:3000/health` would then 
 
 ```json
 {
-   "status":"DOWN",
-   "timestamp":"2021-07-01T08:05:08.522685Z",
+   "status": "DOWN",
+   "timestamp": "2021-07-01T08:05:08.522685Z",
    "details":{
-      "database":{
-         "status":"DOWN",
-         "timestamp":"2021-07-01T08:05:14.603364Z",
-         "error" : "check timed out"
+      "database": {
+         "status": "DOWN",
+         "timestamp": "2021-07-01T08:05:14.603364Z",
+         "error": "check timed out"
       },
-      "search":{
-         "status":"UP",
-         "timestamp":"2021-07-01T08:05:08.522685Z"
+      "search": {
+         "status": "UP",
+         "timestamp": "2021-07-01T08:05:08.522685Z"
       }
    }
 }
