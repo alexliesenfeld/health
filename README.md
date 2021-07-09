@@ -23,7 +23,7 @@
 
 ## Features
 This library allows you to build health checks that do not simply return 200 HTTP status codes but actually 
-check if the systems that your app requires to work are actually available.
+check if the systems that your app requires to work are available.
 
 This library provides the following features:
 
