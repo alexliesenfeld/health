@@ -119,8 +119,8 @@ or entirely block requests based on authentication success.
 
 ### Example
 Based on the example below, the authentication middleware will respond with a JSON response body that only 
-contains the health status, and the corresponding HTTP status code (in this case HTTP status code 503 and JSON response 
-body `{ "status":"DOWN" }`).
+contains the health status, and the corresponding HTTP status code (in this case HTTP status code 
+`503 (Service Unavailable)` and JSON response body `{ "status":"DOWN" }`).
 
 ```go
 health.NewHandler(
