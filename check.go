@@ -236,11 +236,11 @@ func evaluateAvailabilityStatus(state *checkState, maxTimeInError time.Duration,
 }
 
 func aggregateStatus(details map[string]checkStatus, includeDetails bool) aggregatedCheckStatus {
-	ts := time.Now()
+	ts := time.Time{}
 	status := statusUp
 
 	for _, result := range details {
-		if result.Timestamp.Before(ts) {
+		if result.Timestamp.After(ts) {
 			ts = result.Timestamp
 		}
 		if result.Status > status {
