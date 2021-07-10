@@ -124,6 +124,23 @@ and to mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/
 to 1 second by default. If you do not want to use caching altogether, you can disable it using the 
 `health.WithDisabledCache()` configuration option.
 
+## Failure Tolerant Checks
+This library lets you configure failure tolerant checks that allow some degree of failure. The check is only
+considered failed, when predefined tolerance thresholds have been crossed.
+
+To allow some failure, please have a look at the `FailureTolerance` and `FailureToleranceThreshold`
+attributes in your [check configuration](https://pkg.go.dev/github.com/alexliesenfeld/health#Check).
+
+### Example
+Let's assume that your app provides a REST API but also consumes messages from a Kafka topic. If the connection to Kafka
+is down, your app can still serve API requests, but it will not process any messages during this time.
+If the Kafka health check is configured without any failure tolerance, and the connection to Kafka is temporarily down,
+your whole application will become unhealthy. This is most likely not what you want. However, if Kafka is down for
+too long, there may indeed be a problem that requires attention. In this case, you still may want to flag your
+app unhealthy by returning a failing health check, so that it can be automatically restarted by your infrastructure.
+
+Failure tolerant health checks let you configure this kind of behaviour.
+
 ## Security
 The data that is returned as part of health check results usually contains sensitive information
 (such as service names, error messages, etc.). You probably do not want to expose this information to everyone.
@@ -148,23 +165,6 @@ health.NewHandler(
 
 Details, such as error messages, services names, etc. are not exposed to the caller.
 This allows you to open health endpoints to the public but only provide details to authenticated sources.
-
-## Failure Tolerant Checks
-This library lets you configure failure tolerant checks that allow some degree of failure. The check is only 
-considered failed, when predefined tolerance thresholds have been crossed.
-
-To allow some failure, please have a look at the `FailureTolerance` and `FailureToleranceThreshold`
-attributes in your [check configuration](https://pkg.go.dev/github.com/alexliesenfeld/health#Check).
-
-### Example
-Let's assume that your app provides a REST API but also consumes messages from a Kafka topic. If the connection to Kafka
-is down, your app can still serve API requests, but it will not process any messages during this time.
-If the Kafka health check is configured without any failure tolerance, and the connection to Kafka is temporarily down, 
-your whole application will become unhealthy. This is most likely not what you want. However, if Kafka is down for 
-too long, there may indeed be a problem that requires attention. In this case, you still may want to flag your 
-app unhealthy by returning a failing health check, so that it can be automatically restarted by your infrastructure. 
-
-Failure tolerant health checks let you configure this kind of behaviour.
 
 ## License
 `health` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
