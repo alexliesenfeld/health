@@ -29,7 +29,7 @@ This library provides the following features:
 
 - Request based and fixed-schedule health checks.
 - Global and check-based timeout management.
-- Caching (to avoid burdening downstream services with too many requests).
+- Caching (to avoid sending too many requests to downstream services).
 - Custom HTTP request middleware for pre- and postprocessing HTTP requests and/or responses.
 - Failure tolerance based on fail count and/or time thresholds.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) that can be easily used with a [mux](https://golang.org/pkg/net/http/#ServeMux).
@@ -106,8 +106,8 @@ yield a response with HTTP status code `503 (Service Unavailable)`, and the foll
 ## Periodic Checks
 Rather than executing a health check function on every request that is received over the health endpoint,
 periodic checks execute the check function on a fixed schedule. This allows to respond to HTTP requests
-instantly without waiting for the check function to complete. This is especially useful if you
-either expect a higher request rate on the health endpoint, or your checks take a relatively long time to complete.
+instantly without waiting for the check function to complete. This is especially useful if your checks take 
+a relatively long time to complete.
 
 ```go
 health.NewHandler(
@@ -119,8 +119,8 @@ health.NewHandler(
 ```
 
 ## Caching
-Health check responses are cached to avoid burdening downstream services that your program checks with too many 
-requests and to mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set 
+Health check responses are cached to avoid sending too many request to the services that your program checks
+and to mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set 
 to 1 second by default. If you do not want to use caching altogether, you can disable it using the 
 `health.WithDisabledCache()` configuration option.
 
