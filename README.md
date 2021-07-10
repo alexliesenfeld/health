@@ -60,10 +60,7 @@ func main() {
 		
 		// Configure a global timeout that will be applied to all checks.
 		health.WithTimeout(10*time.Second),
-		
-		// Our health endpoint requires authentication.
-		health.WithBasicAuth("username", "password", true),
-		
+
 		// A simple check to see if database connection is up.
 		health.WithCheck(health.Check{                          
 			Name:  "database",
