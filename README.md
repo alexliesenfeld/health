@@ -151,7 +151,10 @@ This allows you to open health endpoints to the public but only provide details 
 
 ## Failure Tolerant Checks
 This library lets you configure failure tolerant checks that allow some degree of failure. The check is only 
-considered failed, when tolerance thresholds have been crossed.
+considered failed, when predefined tolerance thresholds have been crossed.
+
+To allow some failure, please have a look at the `FailureTolerance` and `FailureToleranceThreshold`
+attributes in your [check configuration](https://pkg.go.dev/github.com/alexliesenfeld/health#Check).
 
 ### Example
 Let's assume that your app provides a REST API but also consumes messages from a Kafka topic. If the connection to Kafka
@@ -161,8 +164,7 @@ your whole application will become unhealthy. This is most likely not what you w
 too long, there may indeed be a problem that requires attention. In this case, you still may want to flag your 
 app unhealthy by returning a failing health check, so that it can be automatically restarted by your infrastructure. 
 
-To allow some failure, please have a look at the `FailureTolerance` and `FailureToleranceThreshold` 
-attributes in your [check configuration](https://pkg.go.dev/github.com/alexliesenfeld/health#Check).
+Failure tolerant health checks let you configure this kind of behaviour.
 
 ## License
 `health` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
