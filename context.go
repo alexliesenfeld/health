@@ -2,7 +2,9 @@ package health
 
 import "context"
 
-const ctxAuthSuccessKey = "github.com/alexliesenfeld/health#authenticationSuccess"
+type ctxKey string
+
+const ctxAuthSuccessKey ctxKey = "github.com/alexliesenfeld/health#authenticationSuccess"
 
 func getAuthResult(ctx context.Context) *bool {
 	authOK, ok := ctx.Value(ctxAuthSuccessKey).(bool)
