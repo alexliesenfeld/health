@@ -112,7 +112,7 @@ either expect a higher request rate on the health endpoint, or your checks take 
 health.NewHandler(
 	health.WithPeriodicCheck(15*time.Second, health.Check{
 		Name:    "slow-check",
-		Check:   myLongRunningCheckFunc, // your custom long running check function
+		Check:   someLongRunningCheckFunc, // your custom long running check function
 	}),
 )
 ```
