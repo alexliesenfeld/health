@@ -164,7 +164,7 @@ your whole application will become unhealthy. This is most likely not what you w
 too long, there may indeed be a problem that requires attention. In this case, you still may want to flag your 
 app unhealthy by returning a failing health check, so that it can be automatically restarted by your infrastructure. 
 
-To allow some failure tolerance, please have a look at the `FailureTolerance` and `FailureToleranceThreshold` 
+To allow some failure, please have a look at the `FailureTolerance` and `FailureToleranceThreshold` 
 attributes in your [check configuration](https://pkg.go.dev/github.com/alexliesenfeld/health#Check).
 
 ## License
