@@ -100,7 +100,7 @@ func WithTimeout(timeout time.Duration) option {
 }
 
 // WithManualPeriodicCheckStart prevents an automatic start of periodic checks (see NewHandler).
-// If this configuation option is used and you want to start periodic checks yourself,
+// If this configuration option is used and you want to start periodic checks yourself,
 // you need to start them by using StartPeriodicChecks.
 func WithManualPeriodicCheckStart() option {
 	return func(cfg *healthCheckConfig) {
