@@ -29,11 +29,12 @@ This library provides the following features:
 
 - Request based and fixed-schedule health checks.
 - Global and check-based timeout management.
+- Caching (to avoid burdening downstream services with too many requests).
 - Custom HTTP request middleware for pre- and postprocessing HTTP requests and/or responses.
 - Failure tolerance based on fail count and/or time thresholds.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) that can be easily used with a [mux](https://golang.org/pkg/net/http/#ServeMux).
 - Authentication middleware that allows to hide sensitive information from the public.
-- Caching.
+
 
 ## Example
 ```go
@@ -119,10 +120,9 @@ health.NewHandler(
 
 ## Caching
 Health check responses are cached to avoid burdening downstream services that your program checks with too many 
-requests and to mitigate "denial of service" attacks. Caching can be configured globally and/or be fine-tuned per 
-check. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set to 1 second by default. 
-If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()` 
-configuration option.
+requests and to mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set 
+to 1 second by default. If you do not want to use caching altogether, you can disable it using the 
+`health.WithDisabledCache()` configuration option.
 
 ## Security
 The data that is returned as part of health check results usually contains sensitive information
