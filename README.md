@@ -160,7 +160,7 @@ considered failed, when tolerance thresholds have been crossed.
 Let's assume that your app provides a REST API but also consumes messages from a Kafka topic. If the connection to Kafka
 is down, your app can still serve API requests, but it will not process any messages during this time.
 If the Kafka health check is configured without any failure tolerance, and the connection to Kafka is temporarily down, 
-your whole application will be unhealthy. This is most likely not what you want. However, if Kafka is down for 
+your whole application will become unhealthy. This is most likely not what you want. However, if Kafka is down for 
 too long, there may indeed be a problem that requires attention. In this case, you still may want to flag your 
 app unhealthy by returning a failing health check, so that it can be automatically restarted by your infrastructure. 
 
