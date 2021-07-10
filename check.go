@@ -14,7 +14,7 @@ type (
 		timeout                  time.Duration
 		checks                   []*Check
 		maxErrMsgLen             uint
-		cacheDuration            time.Duration
+		cacheTTL                 time.Duration
 		manualPeriodicCheckStart bool
 	}
 
@@ -129,14 +129,14 @@ func (ck *defaultChecker) Check(ctx context.Context, includeDetails bool) aggreg
 		numChecks     = len(ck.cfg.checks)
 		resChan       = make(chan checkResult, numChecks)
 		results       = map[string]checkStatus{}
-		cacheDuration = ck.cfg.cacheDuration
+		cacheTTL      = ck.cfg.cacheTTL
 		maxErrMsgLen  = ck.cfg.maxErrMsgLen
 		numPendingRes = 0
 	)
 
 	for _, c := range ck.cfg.checks {
 		state := ck.state[c.Name]
-		if !isPeriodicCheck(c) && isCacheExpired(cacheDuration, &state) {
+		if !isPeriodicCheck(c) && isCacheExpired(cacheTTL, &state) {
 			numPendingRes++
 			go func(ctx context.Context, check Check, state checkState) {
 				resChan <- doCheck(ctx, check, state)

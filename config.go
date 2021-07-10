@@ -35,9 +35,8 @@ type (
 // (if not explicitly turned off using WithManualPeriodicCheckStart).
 func NewHandler(options ...option) http.Handler {
 	cfg := healthCheckConfig{
-		cacheDuration: 1 * time.Second,
-		timeout:       30 * time.Second,
-		maxErrMsgLen:  500,
+		timeout:      30 * time.Second,
+		maxErrMsgLen: 500,
 	}
 
 	for _, option := range options {
@@ -108,27 +107,18 @@ func WithManualPeriodicCheckStart() option {
 	}
 }
 
-// WithDisabledCache disabled the check cache. This is not recommended in most cases.
-// This will effectively lead to a health endpoint that initiates a new health check for each incoming HTTP request.
-// This may have an impact on the systems that are being checked (especially if health checks are expensive).
-// Caching also mitigates "denial of service" attacks.
-func WithDisabledCache() option {
-	return WithCacheDuration(0)
-}
-
-// WithCacheDuration sets the duration for how long the aggregated health check result will be
-// cached. This is set to 1 second by default. Caching will prevent that each incoming HTTP request
-// triggers a new health check. A duration of 0 will effectively disable the cache and has the same effect as
-// WithDisabledCache.
-func WithCacheDuration(duration time.Duration) option {
+// WithCache sets the duration for how long the aggregated health check result will be
+// cached. Cache is disabled by default. Caching will prevent that each incoming HTTP request
+// triggers a new health check.
+func WithCache(ttl time.Duration) option {
 	return func(cfg *healthCheckConfig) {
-		cfg.cacheDuration = duration
+		cfg.cacheTTL = ttl
 	}
 }
 
 // WithCheck adds a new health check that contributes to the overall service availability status.
 // This check will be triggered each time the health check HTTP endpoint is called (and the
-// cache has expired, see WithCacheDuration). If health checks are expensive or
+// cache has expired, see WithCache). If health checks are expensive or
 // you expect a lot of calls to the health endpoint, consider using WithPeriodicCheck instead.
 func WithCheck(check Check) option {
 	return func(cfg *healthCheckConfig) {

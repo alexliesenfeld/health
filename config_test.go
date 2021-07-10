@@ -44,21 +44,21 @@ func TestWithCacheDurationConfig(t *testing.T) {
 	duration := 5 * time.Hour
 
 	// Act
-	WithCacheDuration(duration)(&cfg)
+	WithCache(duration)(&cfg)
 
 	// Assert
-	assert.Equal(t, duration, cfg.cacheDuration)
+	assert.Equal(t, duration, cfg.cacheTTL)
 }
 
-func TestWithDisabledCacheConfig(t *testing.T) {
+func TestWithCacheConfig(t *testing.T) {
 	// Arrange
 	cfg := healthCheckConfig{}
 
 	// Act
-	WithDisabledCache()(&cfg)
+	WithCache(1 * time.Second)(&cfg)
 
 	// Assert
-	assert.Equal(t, 0*time.Second, cfg.cacheDuration)
+	assert.Equal(t, 1*time.Second, cfg.cacheTTL)
 }
 
 func TestWithManualPeriodicCheckStartConfig(t *testing.T) {
@@ -118,7 +118,7 @@ func TestNewWithDefaults(t *testing.T) {
 
 	// Assert
 	ckr := handler.(*healthCheckHandler).ckr.(*defaultChecker)
-	assert.Equal(t, 1*time.Second, ckr.cfg.cacheDuration)
+	assert.Equal(t, time.Duration(0), ckr.cfg.cacheTTL)
 	assert.Equal(t, 30*time.Second, ckr.cfg.timeout)
 	assert.Equal(t, uint(500), ckr.cfg.maxErrMsgLen)
 	assert.True(t, configApplied)
