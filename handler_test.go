@@ -40,8 +40,8 @@ func (ck *checkerMock) StopPeriodicChecks() {
 	ck.Called()
 }
 
-func (ck *checkerMock) Check(ctx context.Context, includeDetails bool) aggregatedCheckStatus {
-	args := ck.Called(ctx, includeDetails)
+func (ck *checkerMock) Check(ctx context.Context) aggregatedCheckStatus {
+	args := ck.Called(ctx)
 	return args.Get(0).(aggregatedCheckStatus)
 }
 
@@ -49,7 +49,7 @@ func TestStartPeriodicChecks(t *testing.T) {
 	// Arrange
 	ckr := checkerMock{}
 	ckr.On("StartPeriodicChecks")
-	handler := newHandler([]Middleware{}, &ckr)
+	handler := newHandler(healthCheckConfig{}, &ckr)
 
 	// Act
 	StartPeriodicChecks(handler)
@@ -62,7 +62,7 @@ func TestStopPeriodicChecks(t *testing.T) {
 	// Arrange
 	ckr := checkerMock{}
 	ckr.On("StopPeriodicChecks")
-	handler := newHandler([]Middleware{}, &ckr)
+	handler := newHandler(healthCheckConfig{}, &ckr)
 
 	// Act
 	StopPeriodicChecks(handler)
@@ -71,16 +71,15 @@ func TestStopPeriodicChecks(t *testing.T) {
 	ckr.Mock.AssertCalled(t, "StopPeriodicChecks")
 }
 
-func doTestHandler(t *testing.T, authResult bool, expectedStatus aggregatedCheckStatus, expectedStatusCode int) {
+func doTestHandler(t *testing.T, expectedStatus aggregatedCheckStatus, expectedStatusCode int) {
 	// Arrange
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "https://localhost/foo", nil)
-	request = request.WithContext(withAuthResult(request.Context(), authResult))
 
 	ckr := checkerMock{}
-	ckr.On("Check", mock.Anything, authResult).Return(expectedStatus)
+	ckr.On("Check", mock.Anything).Return(expectedStatus)
 
-	handler := newHandler([]Middleware{}, &ckr)
+	handler := newHandler(healthCheckConfig{}, &ckr)
 
 	// Act
 	handler.ServeHTTP(response, request)
@@ -108,7 +107,7 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 		},
 	}
 
-	doTestHandler(t, true, status, 503)
+	doTestHandler(t, status, 503)
 }
 
 func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
@@ -121,7 +120,7 @@ func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 		},
 	}
 
-	doTestHandler(t, true, status, 200)
+	doTestHandler(t, status, 200)
 }
 
 func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
@@ -136,5 +135,33 @@ func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
 		},
 	}
 
-	doTestHandler(t, false, status, 503)
+	doTestHandler(t, status, 503)
+}
+
+func TestWithGlobalTimeout(t *testing.T) {
+	// Arrange
+	testStart := time.Now()
+	deadline, ok := testStart, false
+	cfg := healthCheckConfig{timeout: 5 * time.Hour}
+
+	ckr := checkerMock{}
+	ckr.On("Check", mock.Anything).
+		Return(aggregatedCheckStatus{}).
+		Run(func(args mock.Arguments) {
+			ctx := args.Get(0).(context.Context)
+			deadline, ok = ctx.Deadline()
+		})
+	handler := newHandler(cfg, &ckr)
+
+	req := httptest.NewRequest("GET", "https://localhost/foo", nil)
+	res := httptest.NewRecorder()
+
+	// Act
+	handler.ServeHTTP(res, req)
+
+	// Assert
+	ckr.Mock.AssertCalled(t, "Check", mock.Anything)
+
+	assert.True(t, ok)
+	assert.True(t, deadline.After(testStart.Add(cfg.timeout)))
 }

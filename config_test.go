@@ -1,10 +1,8 @@
 package health
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -72,29 +70,15 @@ func TestWithManualPeriodicCheckStartConfig(t *testing.T) {
 	assert.True(t, cfg.manualPeriodicCheckStart)
 }
 
-func TestAuthMiddlewareConfig(t *testing.T) {
-	// Attention: This test function only tests the configuration aspect.
-	// Testing the actual middleware can be found in separate tests.
-
+func TestWithTimeoutStartConfig(t *testing.T) {
 	// Arrange
-	options := []option{
-		WithTimeout(5 * time.Hour),
-		WithBasicAuth("peter", "pan", true),
-		WithCustomAuth(true, func(r *http.Request) error {
-			return fmt.Errorf("auth error")
-		}),
-	}
+	cfg := healthCheckConfig{}
 
-	for _, opt := range options {
-		cfg := healthCheckConfig{}
+	// Act
+	WithTimeout(5 * time.Hour)(&cfg)
 
-		// Act
-		opt(&cfg)
-
-		// Assert
-		require.Equal(t, 1, len(cfg.middleware))
-		// TODO: Refactor, so you are able to assert that the correct middleware has been configured.
-	}
+	// Assert
+	assert.Equal(t, 5*time.Hour, cfg.timeout)
 }
 
 func TestWithMaxErrorMessageLengthConfig(t *testing.T) {

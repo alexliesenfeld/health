@@ -33,8 +33,6 @@ This library provides the following features:
 - Custom HTTP request middleware for pre- and postprocessing HTTP requests and/or responses.
 - Failure tolerance based on fail count and/or time thresholds.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) that can be easily used with a [mux](https://golang.org/pkg/net/http/#ServeMux).
-- Authentication middleware that allows to hide sensitive information from the public.
-
 
 ## Example
 ```go
@@ -140,31 +138,6 @@ too long, there may indeed be a problem that requires attention. In this case, y
 app unhealthy by returning a failing health check, so that it can be automatically restarted by your infrastructure.
 
 Failure tolerant health checks let you configure this kind of behaviour.
-
-## Security
-The data that is returned as part of health check results usually contains sensitive information
-(such as service names, error messages, etc.). You probably do not want to expose this information to everyone.
-For this reason, this library provides support for authentication middleware that allows you to hide health details
-or entirely block requests based on authentication success.
-
-### Example
-In the example below, we configure a [basic auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication)
-middleware that expects a username and password in each HTTP request. If authentication fails, it will respond
-with HTTP status code `503 (Service Unavailable)` and a JSON body that only contains the aggregated health status
-(`{ "status":"DOWN" }`).
-
-```go
-health.NewHandler(
-	health.WithBasicAuth("username", "password", true),
-	health.WithCheck(health.Check{
-		Name:    "database",
-		Check: db.PingContext,
-	}), 
-)
-```
-
-Details, such as error messages, services names, etc. are not exposed to the caller.
-This allows you to open health endpoints to the public but only provide details to authenticated sources.
 
 ## License
 `health` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.

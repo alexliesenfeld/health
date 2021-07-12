@@ -10,7 +10,7 @@ import (
 
 type (
 	healthCheckConfig struct {
-		middleware               []Middleware
+		detailsDisabled          bool
 		timeout                  time.Duration
 		checks                   []*Check
 		maxErrMsgLen             uint
@@ -121,7 +121,7 @@ func (ck *defaultChecker) StopPeriodicChecks() {
 	wg.Wait()
 }
 
-func (ck *defaultChecker) Check(ctx context.Context, includeDetails bool) aggregatedCheckStatus {
+func (ck *defaultChecker) Check(ctx context.Context) aggregatedCheckStatus {
 	ck.mtx.Lock()
 	defer ck.mtx.Unlock()
 
@@ -153,7 +153,7 @@ func (ck *defaultChecker) Check(ctx context.Context, includeDetails bool) aggreg
 		numPendingRes--
 	}
 
-	return aggregateStatus(results, includeDetails)
+	return aggregateStatus(results, !ck.cfg.detailsDisabled)
 }
 
 func isCacheExpired(cacheDuration time.Duration, state *checkState) bool {

@@ -40,11 +40,11 @@ func NewHandler(options ...option) http.Handler {
 		maxErrMsgLen: 500,
 	}
 
-	for _, option := range options {
-		option(&cfg)
+	for _, opt := range options {
+		opt(&cfg)
 	}
 
-	return newHandler(cfg.middleware, newChecker(cfg))
+	return newHandler(cfg, newChecker(cfg))
 }
 
 // WithMaxErrorMessageLength limits maximum number of characters
@@ -55,48 +55,21 @@ func WithMaxErrorMessageLength(length uint) option {
 	}
 }
 
-// WithMiddleware allows to add a Middleware to the processing chain of HTTP requests.
-// Middleware is a wrapper for HTTP handlers. This allows to pre- and postprocess HTTP
-// requests/responses before and/or after running the health checks.
-func WithMiddleware(mw Middleware) option {
+// WithDisabledDetails disables hides all data in the JSON response body but the the status itself.
+// Example: { "status":"DOWN" }
+func WithDisabledDetails() option {
 	return func(cfg *healthCheckConfig) {
-		cfg.middleware = append(cfg.middleware, mw)
+		cfg.detailsDisabled = true
 	}
-}
-
-// WithCustomAuth adds a custom authentication middleware so you can use you own authentication
-// functionality to integrate with this library. Parameter sendStatusOnAuthFailure=true
-// allows to return the HTTP status code and the aggregated overall status without the details
-// even if authentication was not successful. This is useful to allow publicly available health checks
-// that do not expose system details.
-// Example: If authentication is not successful and sendStatusOnAuthFailure=true, then HTTP status
-// code 200 (OK) will be returned in case the service is up or 503 (Service Unavailable) if the
-// service is considered down. Additionally, the response body will only contain an aggregated status
-// but without any details (e.g. { "status" : "UP" }). In case sendStatusOnAuthFailure=false
-// and authentication fails, then an empty response body will be returned along with HTTP status code 401
-// (Unauthorized).
-func WithCustomAuth(sendStatusOnAuthFailure bool, authFunc func(r *http.Request) error) option {
-	return WithMiddleware(newAuthMiddleware(sendStatusOnAuthFailure, authFunc))
-}
-
-// WithBasicAuth adds a basic authentication middleware. Parameter sendStatusOnAuthFailure=true
-// allows to pass the HTTP status code to the user even if authentication was not successful.
-// This is useful to allow publicly available health checks that do not expose system details.
-// Example: If authentication is not successful and sendStatusOnAuthFailure=true, then HTTP status
-// code 200 (OK) will be returned in case the service is up or 503 (Service Unavailable) if the
-// service is considered down. Additionally, the response body will only contain an aggregated status
-// but without any details (e.g. { "status" : "UP" }). In case sendStatusOnAuthFailure=false
-// and authentication fails, then an empty response body will be returned along with HTTP status code 401
-// (Unauthorized).
-func WithBasicAuth(username string, password string, sendStatusOnAuthFailure bool) option {
-	return WithMiddleware(newBasicAuthMiddleware(username, password, sendStatusOnAuthFailure))
 }
 
 // WithTimeout globally defines a timeout duration for all checks. You can still override
 // this timeout by using the timeout value in the Check configuration.
 // Default value is 30 seconds.
 func WithTimeout(timeout time.Duration) option {
-	return WithMiddleware(newTimeoutMiddleware(timeout))
+	return func(cfg *healthCheckConfig) {
+		cfg.timeout = timeout
+	}
 }
 
 // WithManualPeriodicCheckStart prevents an automatic start of periodic checks (see NewHandler).

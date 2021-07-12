@@ -277,7 +277,7 @@ func doTestCheckerCheckFunc(t *testing.T, refreshInterval time.Duration, err err
 	ckr := newChecker(healthCheckConfig{checks: checks})
 
 	// Act
-	res := ckr.Check(context.Background(), true)
+	res := ckr.Check(context.Background())
 
 	// Assert
 	require.NotNil(t, res.Details)
