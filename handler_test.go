@@ -108,6 +108,7 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 		},
 	}
 
+	// Use non-standard status codes
 	cfg := healthCheckConfig{statusCodeUp: http.StatusNoContent, statusCodeDown: http.StatusTeapot}
 
 	doTestHandler(t, cfg, status, http.StatusTeapot)
@@ -122,6 +123,8 @@ func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 			"check1": {Status: statusUp, Timestamp: time.Now().UTC(), Error: nil},
 		},
 	}
+
+	// Use non-standard status codes
 	cfg := healthCheckConfig{statusCodeUp: http.StatusNoContent, statusCodeDown: http.StatusTeapot}
 
 	doTestHandler(t, cfg, status, http.StatusNoContent)
@@ -139,6 +142,7 @@ func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
 		},
 	}
 
+	// Use non-standard status codes
 	cfg := healthCheckConfig{statusCodeUp: http.StatusNoContent, statusCodeDown: http.StatusTeapot}
 
 	doTestHandler(t, cfg, status, http.StatusTeapot)
