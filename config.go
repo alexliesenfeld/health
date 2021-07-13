@@ -58,7 +58,7 @@ func WithMaxErrorMessageLength(length uint) option {
 }
 
 // WithDisabledDetails disables hides all data in the JSON response body but the the status itself.
-// Example: { "status":"DOWN" }
+// Example: { "status":"down" }
 func WithDisabledDetails() option {
 	return func(cfg *healthCheckConfig) {
 		cfg.detailsDisabled = true
@@ -81,6 +81,14 @@ func WithCustomStatusCodes(statusCodeUp int, statusCodeDown int) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.statusCodeUp = statusCodeUp
 		cfg.statusCodeDown = statusCodeDown
+	}
+}
+
+// WithStatusChangeListener registers a handler function that will be called whenever the overall system health
+// status changes. Attention: Ideally, this method should be quick and not block for too long.
+func WithStatusChangeListener(listener StatusChangeListener) option {
+	return func(cfg *healthCheckConfig) {
+		cfg.statusChangeListeners = append(cfg.statusChangeListeners, listener)
 	}
 }
 
@@ -128,7 +136,7 @@ func WithCheck(check Check) option {
 // The health endpoint always returns the last result of the periodic check.
 // When periodic checks are started (happens automatically if WithManualPeriodicCheckStart is not used)
 // they are also executed for the first time. Until all periodic checks have not been executed at least once,
-// the overall availability status will be "UNKNOWN" with HTTP status code 503 (Service Unavailable).
+// the overall availability status will be "unknown" with HTTP status code 503 (Service Unavailable).
 func WithPeriodicCheck(refreshPeriod time.Duration, check Check) option {
 	return func(cfg *healthCheckConfig) {
 		check.refreshInterval = refreshPeriod

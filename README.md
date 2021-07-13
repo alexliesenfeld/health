@@ -85,15 +85,14 @@ yield a response with HTTP status code `503 (Service Unavailable)`, and the foll
 
 ```json
 {
-   "status": "DOWN",
-   "timestamp": "2021-07-01T08:05:08.522685Z",
+   "status": "down",
    "details":{
       "database": {
-         "status": "UP",
+         "status": "up",
          "timestamp": "2021-07-01T08:05:14.603364Z"
       },
       "search": {
-         "status": "DOWN",
+         "status": "down",
          "timestamp": "2021-07-01T08:05:08.522685Z",
           "error": "this makes the check fail"
       }

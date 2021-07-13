@@ -16,23 +16,6 @@ type checkerMock struct {
 	mock.Mock
 }
 
-func (s *availabilityStatus) UnmarshalJSON(b []byte) error {
-	var str string
-	err := json.Unmarshal(b, &str)
-	if err != nil {
-		return err
-	}
-
-	*s = map[string]availabilityStatus{
-		"up":      statusUp,
-		"warn":    statusWarn,
-		"unknown": statusUnknown,
-		"down":    statusDown,
-	}[str]
-
-	return nil
-}
-
 func (ck *checkerMock) StartPeriodicChecks() {
 	ck.Called()
 }
@@ -100,11 +83,11 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 	err := "hello"
 
 	status := aggregatedCheckStatus{
-		Status:    statusUnknown,
+		Status:    StatusUnknown,
 		Timestamp: &ts,
-		Details: &map[string]checkStatus{
-			"check1": {Status: statusDown, Timestamp: time.Now().UTC(), Error: &err},
-			"check2": {Status: statusUp, Timestamp: time.Now().UTC(), Error: nil},
+		Details: &map[string]CheckResult{
+			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: &err},
+			"check2": {Status: StatusUp, Timestamp: time.Now().UTC(), Error: nil},
 		},
 	}
 
@@ -117,10 +100,10 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 	ts := time.Now().UTC()
 	status := aggregatedCheckStatus{
-		Status:    statusUp,
+		Status:    StatusUp,
 		Timestamp: &ts,
-		Details: &map[string]checkStatus{
-			"check1": {Status: statusUp, Timestamp: time.Now().UTC(), Error: nil},
+		Details: &map[string]CheckResult{
+			"check1": {Status: StatusUp, Timestamp: time.Now().UTC(), Error: nil},
 		},
 	}
 
@@ -135,10 +118,10 @@ func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
 	err := "an error message"
 
 	status := aggregatedCheckStatus{
-		Status:    statusDown,
+		Status:    StatusDown,
 		Timestamp: &ts,
-		Details: &map[string]checkStatus{
-			"check1": {Status: statusDown, Timestamp: time.Now().UTC(), Error: &err},
+		Details: &map[string]CheckResult{
+			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: &err},
 		},
 	}
 

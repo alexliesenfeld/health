@@ -2,7 +2,6 @@ package health
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -18,6 +17,7 @@ type (
 		maxErrMsgLen             uint
 		cacheTTL                 time.Duration
 		manualPeriodicCheckStart bool
+		statusChangeListeners    []StatusChangeListener
 	}
 
 	checkState struct {
@@ -32,6 +32,7 @@ type (
 		mtx      sync.Mutex
 		cfg      healthCheckConfig
 		state    map[string]checkState
+		status   Status
 		endChans []chan *sync.WaitGroup
 	}
 
@@ -40,30 +41,38 @@ type (
 		newState checkState
 	}
 
-	checkStatus struct {
-		Status    availabilityStatus `json:"status"`
-		Timestamp time.Time          `json:"timestamp,omitempty"`
-		Error     *string            `json:"error,omitempty"`
-	}
-
 	aggregatedCheckStatus struct {
-		Status    availabilityStatus      `json:"status"`
+		Status    Status                  `json:"status"`
 		Timestamp *time.Time              `json:"timestamp,omitempty"`
-		Details   *map[string]checkStatus `json:"details,omitempty"`
+		Details   *map[string]CheckResult `json:"details,omitempty"`
 	}
 
-	availabilityStatus uint
+	CheckResult struct {
+		Status    Status    `json:"status"`
+		Timestamp time.Time `json:"timestamp,omitempty"`
+		Error     *string   `json:"error,omitempty"`
+	}
+
+	StatusChangeListener func(status Status, checks map[string]CheckResult)
+
+	Status string
 )
 
 const (
-	statusUp availabilityStatus = iota
-	statusWarn
-	statusUnknown
-	statusDown
+	StatusUnknown Status = "unknown"
+	StatusUp      Status = "up"
+	StatusDown    Status = "down"
 )
 
-func (s availabilityStatus) MarshalJSON() ([]byte, error) {
-	return json.Marshal([...]string{"up", "warn", "unknown", "down"}[s])
+func (s Status) Criticality() int {
+	switch s {
+	case StatusDown:
+		return 2
+	case StatusUnknown:
+		return 1
+	default:
+		return 0
+	}
 }
 
 func newChecker(cfg healthCheckConfig) *defaultChecker {
@@ -73,7 +82,7 @@ func newChecker(cfg healthCheckConfig) *defaultChecker {
 			startedAt: time.Now(),
 		}
 	}
-	ckr := defaultChecker{sync.Mutex{}, cfg, state, []chan *sync.WaitGroup{}}
+	ckr := defaultChecker{sync.Mutex{}, cfg, state, StatusUnknown, []chan *sync.WaitGroup{}}
 	if !cfg.manualPeriodicCheckStart {
 		ckr.StartPeriodicChecks()
 	}
@@ -130,10 +139,11 @@ func (ck *defaultChecker) Check(ctx context.Context) aggregatedCheckStatus {
 	var (
 		numChecks     = len(ck.cfg.checks)
 		resChan       = make(chan checkResult, numChecks)
-		results       = map[string]checkStatus{}
+		results       = map[string]CheckResult{}
 		cacheTTL      = ck.cfg.cacheTTL
 		maxErrMsgLen  = ck.cfg.maxErrMsgLen
 		numPendingRes = 0
+		lastStatus    = ck.status
 	)
 
 	for _, c := range ck.cfg.checks {
@@ -155,7 +165,27 @@ func (ck *defaultChecker) Check(ctx context.Context) aggregatedCheckStatus {
 		numPendingRes--
 	}
 
-	return aggregateResult(results, !ck.cfg.detailsDisabled)
+	ck.status = aggregateStatus(results)
+
+	runStatusChangeListeners(ck.cfg.statusChangeListeners, lastStatus, ck.status, results)
+
+	return newAggregatedCheckStatus(ck.status, results, !ck.cfg.detailsDisabled)
+}
+
+func runStatusChangeListeners(listeners []StatusChangeListener, old Status, current Status, results map[string]CheckResult) {
+	if old != current {
+		for _, listener := range listeners {
+			listener(current, results)
+		}
+	}
+}
+
+func newAggregatedCheckStatus(status Status, results map[string]CheckResult, withDetails bool) aggregatedCheckStatus {
+	aggStatus := aggregatedCheckStatus{Status: status}
+	if withDetails {
+		aggStatus.Details = &results
+	}
+	return aggStatus
 }
 
 func isCacheExpired(cacheDuration time.Duration, state *checkState) bool {
@@ -199,8 +229,8 @@ func executeCheckFunc(ctx context.Context, check *Check) error {
 	}
 }
 
-func newCheckStatus(check *Check, state *checkState, maxErrMsgLen uint) checkStatus {
-	return checkStatus{
+func newCheckStatus(check *Check, state *checkState, maxErrMsgLen uint) CheckResult {
+	return CheckResult{
 		Status:    evaluateAvailabilityStatus(state, check.FailureTolerance, check.FailureToleranceThreshold),
 		Error:     toErrorDesc(state.lastResult, maxErrMsgLen),
 		Timestamp: state.lastCheckedAt,
@@ -218,9 +248,9 @@ func toErrorDesc(err error, maxLen uint) *string {
 	return nil
 }
 
-func evaluateAvailabilityStatus(state *checkState, maxTimeInError time.Duration, maxFails uint) availabilityStatus {
+func evaluateAvailabilityStatus(state *checkState, maxTimeInError time.Duration, maxFails uint) Status {
 	if state.lastCheckedAt.IsZero() {
-		return statusUnknown
+		return StatusUnknown
 	} else if state.lastResult != nil {
 		maxTimeInErrorSinceStartPassed := state.startedAt.Add(maxTimeInError).Before(time.Now())
 		maxTimeInErrorSinceLastSuccessPassed := state.lastSuccessAt.Add(maxTimeInError).Before(time.Now())
@@ -229,30 +259,18 @@ func evaluateAvailabilityStatus(state *checkState, maxTimeInError time.Duration,
 		failCountThresholdCrossed := state.consecutiveFails >= maxFails
 
 		if failCountThresholdCrossed && timeInErrorThresholdCrossed {
-			return statusDown
+			return StatusDown
 		}
-		return statusWarn
-	} else {
-		return statusUp
 	}
+	return StatusUp
 }
 
-func aggregateResult(results map[string]checkStatus, withDetails bool) aggregatedCheckStatus {
-	ts := time.Time{}
-	status := statusUp
-
+func aggregateStatus(results map[string]CheckResult) Status {
+	status := StatusUp
 	for _, result := range results {
-		if result.Timestamp.After(ts) {
-			ts = result.Timestamp
-		}
-		if result.Status > status {
+		if result.Status.Criticality() > status.Criticality() {
 			status = result.Status
 		}
 	}
-
-	if withDetails {
-		return aggregatedCheckStatus{status, &ts, &results}
-	}
-
-	return aggregatedCheckStatus{Status: status}
+	return status
 }

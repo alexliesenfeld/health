@@ -72,8 +72,8 @@ func newHandler(cfg healthCheckConfig, ckr checker) http.Handler {
 	return &healthCheckHandler{ckr: ckr, cfg: cfg}
 }
 
-func mapHTTPStatus(cfg *healthCheckConfig, status availabilityStatus) int {
-	if status == statusDown || status == statusUnknown {
+func mapHTTPStatus(cfg *healthCheckConfig, status Status) int {
+	if status == StatusDown || status == StatusUnknown {
 		return cfg.statusCodeDown
 	}
 	return cfg.statusCodeUp

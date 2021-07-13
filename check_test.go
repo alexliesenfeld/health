@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -13,49 +12,47 @@ import (
 func TestAggregateResult(t *testing.T) {
 	// Arrange
 	errMsg := "this is an error message"
-	testData := map[string]checkStatus{
+	testData := map[string]CheckResult{
 		"check1": {
-			Status:    statusUp,
+			Status:    StatusUp,
 			Error:     nil,
 			Timestamp: time.Now().Add(-5 * time.Minute),
 		},
 		"check2": {
-			Status:    statusWarn,
+			Status:    StatusUnknown,
 			Error:     nil,
 			Timestamp: time.Now().Add(-3 * time.Minute),
 		},
 		"check3": {
-			Status:    statusDown,
+			Status:    StatusDown,
 			Error:     &errMsg,
 			Timestamp: time.Now().Add(-1 * time.Minute),
 		},
 	}
 
 	// Act
-	result := aggregateResult(testData, true)
+	result := aggregateStatus(testData)
 
 	// Assert
-	assert.Equal(t, statusDown, result.Status)
-	assert.Equal(t, true, result.Timestamp.Equal(testData["check3"].Timestamp))
-	assert.Equal(t, true, reflect.DeepEqual(&testData, result.Details))
+	assert.Equal(t, StatusDown, result)
+	//assert.Equal(t, true, result.Timestamp.Equal(testData["check3"].Timestamp))
+	//assert.Equal(t, true, reflect.DeepEqual(&testData, result.Details))
 }
 
 func TestAggregateResultWithoutDetails(t *testing.T) {
 	// Arrange
-	testData := map[string]checkStatus{"check1": {Status: statusUp, Timestamp: time.Now()}}
+	testData := map[string]CheckResult{"check1": {Status: StatusUp, Timestamp: time.Now()}}
 
 	// Act
-	result := aggregateResult(testData, false)
+	result := aggregateStatus(testData)
 
 	// Assert
-	assert.Equal(t, statusUp, result.Status)
-	assert.Nil(t, result.Timestamp)
-	assert.Nil(t, result.Details)
+	assert.Equal(t, StatusUp, result)
 }
 
 func doTestEvaluateAvailabilityStatus(
 	t *testing.T,
-	expectedStatus availabilityStatus,
+	expectedStatus Status,
 	maxTimeInError time.Duration,
 	maxFails uint,
 	state checkState,
@@ -68,26 +65,26 @@ func doTestEvaluateAvailabilityStatus(
 }
 
 func TestWhenNoChecksMadeYetThenStatusUnknown(t *testing.T) {
-	doTestEvaluateAvailabilityStatus(t, statusUnknown, 0, 0, checkState{
+	doTestEvaluateAvailabilityStatus(t, StatusUnknown, 0, 0, checkState{
 		lastCheckedAt: time.Time{},
 	})
 }
 
 func TestWhenNoErrorThenStatusUp(t *testing.T) {
-	doTestEvaluateAvailabilityStatus(t, statusUp, 0, 0, checkState{
+	doTestEvaluateAvailabilityStatus(t, StatusUp, 0, 0, checkState{
 		lastCheckedAt: time.Now(),
 	})
 }
 
 func TestWhenErrorThenStatusDown(t *testing.T) {
-	doTestEvaluateAvailabilityStatus(t, statusDown, 0, 0, checkState{
+	doTestEvaluateAvailabilityStatus(t, StatusDown, 0, 0, checkState{
 		lastCheckedAt: time.Now(),
 		lastResult:    fmt.Errorf("example error"),
 	})
 }
 
 func TestWhenErrorAndMaxFailuresThresholdNotCrossedThenStatusWarn(t *testing.T) {
-	doTestEvaluateAvailabilityStatus(t, statusWarn, 1*time.Second, uint(10), checkState{
+	doTestEvaluateAvailabilityStatus(t, StatusUp, 1*time.Second, uint(10), checkState{
 		lastCheckedAt:    time.Now(),
 		lastResult:       fmt.Errorf("example error"),
 		startedAt:        time.Now().Add(-3 * time.Minute),
@@ -97,7 +94,7 @@ func TestWhenErrorAndMaxFailuresThresholdNotCrossedThenStatusWarn(t *testing.T) 
 }
 
 func TestWhenErrorAndMaxTimeInErrorThresholdNotCrossedThenStatusWarn(t *testing.T) {
-	doTestEvaluateAvailabilityStatus(t, statusWarn, 1*time.Hour, uint(1), checkState{
+	doTestEvaluateAvailabilityStatus(t, StatusUp, 1*time.Hour, uint(1), checkState{
 		lastCheckedAt:    time.Now(),
 		lastResult:       fmt.Errorf("example error"), // Required for the test
 		startedAt:        time.Now().Add(-3 * time.Minute),
@@ -107,7 +104,7 @@ func TestWhenErrorAndMaxTimeInErrorThresholdNotCrossedThenStatusWarn(t *testing.
 }
 
 func TestWhenErrorAndAllThresholdsCrossedThenStatusDown(t *testing.T) {
-	doTestEvaluateAvailabilityStatus(t, statusDown, 1*time.Second, uint(1), checkState{
+	doTestEvaluateAvailabilityStatus(t, StatusDown, 1*time.Second, uint(1), checkState{
 		lastCheckedAt:    time.Now(),
 		lastResult:       fmt.Errorf("example error"), // Required for the test
 		startedAt:        time.Now().Add(-3 * time.Minute),
@@ -256,7 +253,7 @@ func TestInternalCheckWithCheckSuccess(t *testing.T) {
 	assert.Equal(t, uint(0), result.newState.consecutiveFails)
 }
 
-func doTestCheckerCheckFunc(t *testing.T, refreshInterval time.Duration, err error, expectedStatus availabilityStatus) {
+func doTestCheckerCheckFunc(t *testing.T, refreshInterval time.Duration, err error, expectedStatus Status) {
 	// Arrange
 	checks := []*Check{
 		{
@@ -289,13 +286,13 @@ func doTestCheckerCheckFunc(t *testing.T, refreshInterval time.Duration, err err
 }
 
 func TestWhenChecksExecutedThenAggregatedResultUp(t *testing.T) {
-	doTestCheckerCheckFunc(t, 0, nil, statusUp)
+	doTestCheckerCheckFunc(t, 0, nil, StatusUp)
 }
 
 func TestWhenOneCheckFailedThenAggregatedResultDown(t *testing.T) {
-	doTestCheckerCheckFunc(t, 0, fmt.Errorf("this is a check error"), statusDown)
+	doTestCheckerCheckFunc(t, 0, fmt.Errorf("this is a check error"), StatusDown)
 }
 
 func TestCheckSuccessNotAllChecksExecutedYet(t *testing.T) {
-	doTestCheckerCheckFunc(t, 5*time.Hour, nil, statusUnknown)
+	doTestCheckerCheckFunc(t, 5*time.Hour, nil, StatusUnknown)
 }
