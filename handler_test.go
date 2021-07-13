@@ -23,10 +23,10 @@ func (s *availabilityStatus) UnmarshalJSON(b []byte) error {
 	}
 
 	*s = map[string]availabilityStatus{
-		"UP":      statusUp,
-		"WARN":    statusWarn,
-		"UNKNOWN": statusUnknown,
-		"DOWN":    statusDown,
+		"up":      statusUp,
+		"warn":    statusWarn,
+		"unknown": statusUnknown,
+		"down":    statusDown,
 	}[str]
 
 	return nil

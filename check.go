@@ -61,7 +61,7 @@ const (
 )
 
 func (s availabilityStatus) MarshalJSON() ([]byte, error) {
-	return json.Marshal([...]string{"UP", "WARN", "UNKNOWN", "DOWN"}[s])
+	return json.Marshal([...]string{"up", "warn", "unknown", "down"}[s])
 }
 
 func newChecker(cfg healthCheckConfig) *defaultChecker {
