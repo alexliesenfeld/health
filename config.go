@@ -35,9 +35,11 @@ type (
 // (if not explicitly turned off using WithManualPeriodicCheckStart).
 func NewHandler(options ...option) http.Handler {
 	cfg := healthCheckConfig{
-		cacheTTL:     1 * time.Second,
-		timeout:      30 * time.Second,
-		maxErrMsgLen: 500,
+		statusCodeUp:   http.StatusOK,
+		statusCodeDown: http.StatusServiceUnavailable,
+		cacheTTL:       1 * time.Second,
+		timeout:        30 * time.Second,
+		maxErrMsgLen:   500,
 	}
 
 	for _, opt := range options {
@@ -63,20 +65,22 @@ func WithDisabledDetails() option {
 	}
 }
 
-// WithRuntimeInfo will enable runtime information in health check responses, such as the number of goroutines,
-// go version number, etc.
-func WithRuntimeInfo() option {
-	return func(cfg *healthCheckConfig) {
-		cfg.runtimeInfoEnabled = true
-	}
-}
-
 // WithTimeout globally defines a timeout duration for all checks. You can still override
 // this timeout by using the timeout value in the Check configuration.
 // Default value is 30 seconds.
 func WithTimeout(timeout time.Duration) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.timeout = timeout
+	}
+}
+
+// WithCustomStatusCodes allows to set custom HTTP status code for the case when the system is evaluated to be
+// up or down (based on check results).
+// Default values are statusCodeUp = 200 (OK) and statusCodeDown = 503 (Service Unavailable).
+func WithCustomStatusCodes(statusCodeUp int, statusCodeDown int) option {
+	return func(cfg *healthCheckConfig) {
+		cfg.statusCodeUp = statusCodeUp
+		cfg.statusCodeDown = statusCodeDown
 	}
 }
 

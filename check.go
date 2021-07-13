@@ -10,9 +10,10 @@ import (
 
 type (
 	healthCheckConfig struct {
-		runtimeInfoEnabled       bool
 		detailsDisabled          bool
 		timeout                  time.Duration
+		statusCodeUp             int
+		statusCodeDown           int
 		checks                   []*Check
 		maxErrMsgLen             uint
 		cacheTTL                 time.Duration
@@ -49,7 +50,6 @@ type (
 		Status    availabilityStatus      `json:"status"`
 		Timestamp *time.Time              `json:"timestamp,omitempty"`
 		Details   *map[string]checkStatus `json:"details,omitempty"`
-		Runtime   *runtimeSnapshot        `json:"runtime,omitempty"`
 	}
 
 	availabilityStatus uint
@@ -134,7 +134,6 @@ func (ck *defaultChecker) Check(ctx context.Context) aggregatedCheckStatus {
 		cacheTTL      = ck.cfg.cacheTTL
 		maxErrMsgLen  = ck.cfg.maxErrMsgLen
 		numPendingRes = 0
-		rtSnapshot    runtimeSnapshot
 	)
 
 	for _, c := range ck.cfg.checks {
@@ -156,11 +155,7 @@ func (ck *defaultChecker) Check(ctx context.Context) aggregatedCheckStatus {
 		numPendingRes--
 	}
 
-	if ck.cfg.runtimeInfoEnabled {
-		rtSnapshot = newRuntimeSnapshot()
-	}
-
-	return aggregateStatus(results, &rtSnapshot, !ck.cfg.detailsDisabled)
+	return aggregateResult(results, !ck.cfg.detailsDisabled)
 }
 
 func isCacheExpired(cacheDuration time.Duration, state *checkState) bool {
@@ -242,7 +237,7 @@ func evaluateAvailabilityStatus(state *checkState, maxTimeInError time.Duration,
 	}
 }
 
-func aggregateStatus(results map[string]checkStatus, rtSnapshot *runtimeSnapshot, includeDetails bool) aggregatedCheckStatus {
+func aggregateResult(results map[string]checkStatus, withDetails bool) aggregatedCheckStatus {
 	ts := time.Time{}
 	status := statusUp
 
@@ -255,16 +250,9 @@ func aggregateStatus(results map[string]checkStatus, rtSnapshot *runtimeSnapshot
 		}
 	}
 
-	if includeDetails {
-		return aggregatedCheckStatus{
-			status,
-			&ts,
-			&results,
-			rtSnapshot,
-		}
+	if withDetails {
+		return aggregatedCheckStatus{status, &ts, &results}
 	}
 
-	return aggregatedCheckStatus{
-		Status: status,
-	}
+	return aggregatedCheckStatus{Status: status}
 }

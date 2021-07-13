@@ -54,7 +54,7 @@ func (h *healthCheckHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Write HTTP response
 	disableResponseCache(w)
-	w.WriteHeader(mapHTTPStatus(res.Status))
+	w.WriteHeader(mapHTTPStatus(&h.cfg, res.Status))
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Write(jsonResp)
 }
@@ -72,9 +72,9 @@ func newHandler(cfg healthCheckConfig, ckr checker) http.Handler {
 	return &healthCheckHandler{ckr: ckr, cfg: cfg}
 }
 
-func mapHTTPStatus(status availabilityStatus) int {
+func mapHTTPStatus(cfg *healthCheckConfig, status availabilityStatus) int {
 	if status == statusDown || status == statusUnknown {
-		return http.StatusServiceUnavailable
+		return cfg.statusCodeDown
 	}
-	return http.StatusOK
+	return cfg.statusCodeUp
 }

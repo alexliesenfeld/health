@@ -32,7 +32,7 @@ func TestAggregateResult(t *testing.T) {
 	}
 
 	// Act
-	result := aggregateStatus(testData, true)
+	result := aggregateResult(testData, true)
 
 	// Assert
 	assert.Equal(t, statusDown, result.Status)
@@ -45,7 +45,7 @@ func TestAggregateResultWithoutDetails(t *testing.T) {
 	testData := map[string]checkStatus{"check1": {Status: statusUp, Timestamp: time.Now()}}
 
 	// Act
-	result := aggregateStatus(testData, false)
+	result := aggregateResult(testData, false)
 
 	// Assert
 	assert.Equal(t, statusUp, result.Status)

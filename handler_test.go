@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
@@ -71,7 +72,7 @@ func TestStopPeriodicChecks(t *testing.T) {
 	ckr.Mock.AssertCalled(t, "StopPeriodicChecks")
 }
 
-func doTestHandler(t *testing.T, expectedStatus aggregatedCheckStatus, expectedStatusCode int) {
+func doTestHandler(t *testing.T, cfg healthCheckConfig, expectedStatus aggregatedCheckStatus, expectedStatusCode int) {
 	// Arrange
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "https://localhost/foo", nil)
@@ -79,7 +80,7 @@ func doTestHandler(t *testing.T, expectedStatus aggregatedCheckStatus, expectedS
 	ckr := checkerMock{}
 	ckr.On("Check", mock.Anything).Return(expectedStatus)
 
-	handler := newHandler(healthCheckConfig{}, &ckr)
+	handler := newHandler(cfg, &ckr)
 
 	// Act
 	handler.ServeHTTP(response, request)
@@ -107,7 +108,9 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 		},
 	}
 
-	doTestHandler(t, status, 503)
+	cfg := healthCheckConfig{statusCodeUp: http.StatusNoContent, statusCodeDown: http.StatusTeapot}
+
+	doTestHandler(t, cfg, status, http.StatusTeapot)
 }
 
 func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
@@ -119,8 +122,9 @@ func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 			"check1": {Status: statusUp, Timestamp: time.Now().UTC(), Error: nil},
 		},
 	}
+	cfg := healthCheckConfig{statusCodeUp: http.StatusNoContent, statusCodeDown: http.StatusTeapot}
 
-	doTestHandler(t, status, 200)
+	doTestHandler(t, cfg, status, http.StatusNoContent)
 }
 
 func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
@@ -135,7 +139,9 @@ func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
 		},
 	}
 
-	doTestHandler(t, status, 503)
+	cfg := healthCheckConfig{statusCodeUp: http.StatusNoContent, statusCodeDown: http.StatusTeapot}
+
+	doTestHandler(t, cfg, status, http.StatusTeapot)
 }
 
 func TestWithGlobalTimeout(t *testing.T) {
