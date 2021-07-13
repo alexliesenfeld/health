@@ -3,6 +3,7 @@ package health
 import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -90,6 +91,33 @@ func TestWithMaxErrorMessageLengthConfig(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, uint(300), cfg.maxErrMsgLen)
+}
+
+func TestWithCustomStatusCodesConfig(t *testing.T) {
+	// Arrange
+	cfg := healthCheckConfig{}
+
+	// Act
+	// Use of non standard status codes.
+	WithCustomStatusCodes(http.StatusCreated, http.StatusBadGateway)(&cfg)
+
+	// Assert
+	assert.Equal(t, http.StatusCreated, cfg.statusCodeUp)
+	assert.Equal(t, http.StatusBadGateway, cfg.statusCodeDown)
+}
+
+func TestWithStatusChangeListenerConfig(t *testing.T) {
+	// Arrange
+	cfg := healthCheckConfig{}
+
+	// Act
+	// Use of non standard status codes.
+	WithStatusChangeListener(func(status Status, checks map[string]CheckResult) {})(&cfg)
+	WithStatusChangeListener(func(status Status, checks map[string]CheckResult) {})(&cfg)
+
+	// Assert
+	assert.Equal(t, 2, len(cfg.statusChangeListeners))
+	// Not possible in Go to compare functions.
 }
 
 func TestNewWithDefaults(t *testing.T) {
