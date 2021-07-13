@@ -100,26 +100,25 @@ yield a response with HTTP status code `503 (Service Unavailable)`, and the foll
 }
 ```
 
-## Periodic Checks
-Rather than executing a health check function on every request that is received over the health endpoint,
-periodic checks execute the check function on a fixed schedule. This allows to respond to HTTP requests
-instantly without waiting for the check function to complete. This is especially useful if your checks take 
-a relatively long time to complete.
-
-```go
-health.NewHandler(
-	health.WithPeriodicCheck(15*time.Second, health.Check{
-		Name:    "slow-check",
-		Check:   someLongRunningCheckFunc,
-	}),
-)
-```
-
 ## Caching
 Health check responses are cached to avoid sending too many request to the services that your program checks
-and to mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set 
-to 1 second by default. If you do not want to use caching altogether, you can disable it using the 
+and to mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set
+to 1 second by default. If you do not want to use caching altogether, you can disable it using the
 `health.WithDisabledCache()` configuration option.
+
+## Periodic Checks
+When executing health check functions synchronously (i.e. for every HTTP request), the overall response delay will
+be at least as high as the one of your slowest check function. This is usually OK for smaller applications 
+with a low number of quickly checkable dependencies and *with enabled caching*. This approach, however, will likely 
+be problematic for more involved applications that either have many dependencies and/or some 
+relatively slow check functions. 
+
+Rather than executing a health check function on every request that is received over the health endpoint,
+periodic checks execute the check function on a fixed schedule. With this approach, the health status is always 
+read from a local cache. It allows responding to HTTP requests instantly without waiting for the check function to 
+complete.
+
+Periodic checks can be configured using the `WithPeriodicCheck` configuration option (see example above).
 
 ## Failure Tolerant Checks
 This library lets you configure failure tolerant checks that allow some degree of failure. The check is only
