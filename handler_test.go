@@ -79,12 +79,9 @@ func doTestHandler(t *testing.T, cfg healthCheckConfig, expectedStatus aggregate
 }
 
 func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
-	ts := time.Now().UTC()
 	err := "hello"
-
 	status := aggregatedCheckStatus{
-		Status:    StatusUnknown,
-		Timestamp: &ts,
+		Status: StatusUnknown,
 		Details: &map[string]CheckResult{
 			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: &err},
 			"check2": {Status: StatusUp, Timestamp: time.Now().UTC(), Error: nil},
@@ -98,10 +95,8 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 }
 
 func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
-	ts := time.Now().UTC()
 	status := aggregatedCheckStatus{
-		Status:    StatusUp,
-		Timestamp: &ts,
+		Status: StatusUp,
 		Details: &map[string]CheckResult{
 			"check1": {Status: StatusUp, Timestamp: time.Now().UTC(), Error: nil},
 		},
@@ -114,12 +109,9 @@ func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 }
 
 func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
-	ts := time.Now().UTC()
 	err := "an error message"
-
 	status := aggregatedCheckStatus{
-		Status:    StatusDown,
-		Timestamp: &ts,
+		Status: StatusDown,
 		Details: &map[string]CheckResult{
 			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: &err},
 		},

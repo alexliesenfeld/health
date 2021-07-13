@@ -5,49 +5,62 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"reflect"
 	"testing"
 	"time"
 )
 
-func TestAggregateResult(t *testing.T) {
+func TestStatusUnknownBeforeStatusUp(t *testing.T) {
 	// Arrange
-	errMsg := "this is an error message"
 	testData := map[string]CheckResult{
-		"check1": {
-			Status:    StatusUp,
-			Error:     nil,
-			Timestamp: time.Now().Add(-5 * time.Minute),
-		},
-		"check2": {
-			Status:    StatusUnknown,
-			Error:     nil,
-			Timestamp: time.Now().Add(-3 * time.Minute),
-		},
-		"check3": {
-			Status:    StatusDown,
-			Error:     &errMsg,
-			Timestamp: time.Now().Add(-1 * time.Minute),
-		},
+		"check1": {Status: StatusUp},
+		"check2": {Status: StatusUnknown},
 	}
 
 	// Act
 	result := aggregateStatus(testData)
 
 	// Assert
-	assert.Equal(t, StatusDown, result)
-	//assert.Equal(t, true, result.Timestamp.Equal(testData["check3"].Timestamp))
-	//assert.Equal(t, true, reflect.DeepEqual(&testData, result.Details))
+	assert.Equal(t, result, StatusUnknown)
 }
 
-func TestAggregateResultWithoutDetails(t *testing.T) {
+func TestStatusDownBeforeStatusUnknown(t *testing.T) {
 	// Arrange
-	testData := map[string]CheckResult{"check1": {Status: StatusUp, Timestamp: time.Now()}}
+	testData := map[string]CheckResult{
+		"check1": {Status: StatusDown},
+		"check2": {Status: StatusUnknown},
+	}
 
 	// Act
 	result := aggregateStatus(testData)
 
 	// Assert
-	assert.Equal(t, StatusUp, result)
+	assert.Equal(t, result, StatusDown)
+}
+
+func TestNewAggregatedCheckStatusWithDetails(t *testing.T) {
+	// Arrange
+	errMsg := "this is an error message"
+	testData := map[string]CheckResult{"check1": {StatusDown, time.Now(), &errMsg}}
+
+	// Act
+	result := newAggregatedCheckStatus(StatusDown, testData, true)
+
+	// Assert
+	assert.Equal(t, StatusDown, result.Status)
+	assert.Equal(t, true, reflect.DeepEqual(&testData, result.Details))
+}
+
+func TestNewAggregatedCheckStatusWithoutDetails(t *testing.T) {
+	// Arrange
+	testData := map[string]CheckResult{}
+
+	// Act
+	result := newAggregatedCheckStatus(StatusDown, testData, false)
+
+	// Assert
+	assert.Equal(t, StatusDown, result.Status)
+	assert.Nil(t, result.Details)
 }
 
 func doTestEvaluateAvailabilityStatus(
@@ -295,4 +308,43 @@ func TestWhenOneCheckFailedThenAggregatedResultDown(t *testing.T) {
 
 func TestCheckSuccessNotAllChecksExecutedYet(t *testing.T) {
 	doTestCheckerCheckFunc(t, 5*time.Hour, nil, StatusUnknown)
+}
+
+func TestCheckExecuteListeners(t *testing.T) {
+	// Arrange
+	var (
+		actualStatus      *Status                 = nil
+		actualResults     *map[string]CheckResult = nil
+		expectedErrMsg                            = "test error"
+		expectedCheckName                         = "testCheck"
+		testStartedAt                             = time.Now()
+	)
+
+	checks := []*Check{
+		{
+			Name: expectedCheckName,
+			Check: func(ctx context.Context) error {
+				return fmt.Errorf(expectedErrMsg)
+			},
+		},
+	}
+
+	listeners := []StatusChangeListener{
+		func(status Status, checks map[string]CheckResult) {
+			actualStatus = &status
+			actualResults = &checks
+		},
+	}
+
+	ckr := newChecker(healthCheckConfig{checks: checks, statusChangeListeners: listeners, maxErrMsgLen: 10})
+
+	// Act
+	ckr.Check(context.Background())
+
+	// Assert
+	assert.Equal(t, StatusDown, *actualStatus)
+	assert.Equal(t, 1, len(*actualResults))
+	assert.Equal(t, &expectedErrMsg, (*actualResults)[expectedCheckName].Error)
+	assert.Equal(t, StatusDown, (*actualResults)[expectedCheckName].Status)
+	assert.True(t, (*actualResults)[expectedCheckName].Timestamp.After(testStartedAt))
 }

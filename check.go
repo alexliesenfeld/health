@@ -42,9 +42,8 @@ type (
 	}
 
 	aggregatedCheckStatus struct {
-		Status    Status                  `json:"status"`
-		Timestamp *time.Time              `json:"timestamp,omitempty"`
-		Details   *map[string]CheckResult `json:"details,omitempty"`
+		Status  Status                  `json:"status"`
+		Details *map[string]CheckResult `json:"details,omitempty"`
 	}
 
 	CheckResult struct {
@@ -142,8 +141,8 @@ func (ck *defaultChecker) Check(ctx context.Context) aggregatedCheckStatus {
 		results       = map[string]CheckResult{}
 		cacheTTL      = ck.cfg.cacheTTL
 		maxErrMsgLen  = ck.cfg.maxErrMsgLen
-		numPendingRes = 0
 		lastStatus    = ck.status
+		numPendingRes = 0
 	)
 
 	for _, c := range ck.cfg.checks {
