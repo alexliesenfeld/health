@@ -10,6 +10,7 @@ import (
 
 type (
 	healthCheckConfig struct {
+		runtimeInfoEnabled       bool
 		detailsDisabled          bool
 		timeout                  time.Duration
 		checks                   []*Check
@@ -48,6 +49,7 @@ type (
 		Status    availabilityStatus      `json:"status"`
 		Timestamp *time.Time              `json:"timestamp,omitempty"`
 		Details   *map[string]checkStatus `json:"details,omitempty"`
+		Runtime   *runtimeSnapshot        `json:"runtime,omitempty"`
 	}
 
 	availabilityStatus uint
@@ -132,6 +134,7 @@ func (ck *defaultChecker) Check(ctx context.Context) aggregatedCheckStatus {
 		cacheTTL      = ck.cfg.cacheTTL
 		maxErrMsgLen  = ck.cfg.maxErrMsgLen
 		numPendingRes = 0
+		rtSnapshot    runtimeSnapshot
 	)
 
 	for _, c := range ck.cfg.checks {
@@ -153,7 +156,11 @@ func (ck *defaultChecker) Check(ctx context.Context) aggregatedCheckStatus {
 		numPendingRes--
 	}
 
-	return aggregateStatus(results, !ck.cfg.detailsDisabled)
+	if ck.cfg.runtimeInfoEnabled {
+		rtSnapshot = newRuntimeSnapshot()
+	}
+
+	return aggregateStatus(results, &rtSnapshot, !ck.cfg.detailsDisabled)
 }
 
 func isCacheExpired(cacheDuration time.Duration, state *checkState) bool {
@@ -235,11 +242,11 @@ func evaluateAvailabilityStatus(state *checkState, maxTimeInError time.Duration,
 	}
 }
 
-func aggregateStatus(details map[string]checkStatus, includeDetails bool) aggregatedCheckStatus {
+func aggregateStatus(results map[string]checkStatus, rtSnapshot *runtimeSnapshot, includeDetails bool) aggregatedCheckStatus {
 	ts := time.Time{}
 	status := statusUp
 
-	for _, result := range details {
+	for _, result := range results {
 		if result.Timestamp.After(ts) {
 			ts = result.Timestamp
 		}
@@ -252,7 +259,8 @@ func aggregateStatus(details map[string]checkStatus, includeDetails bool) aggreg
 		return aggregatedCheckStatus{
 			status,
 			&ts,
-			&details,
+			&results,
+			rtSnapshot,
 		}
 	}
 

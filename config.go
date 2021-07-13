@@ -63,6 +63,14 @@ func WithDisabledDetails() option {
 	}
 }
 
+// WithRuntimeInfo will enable runtime information in health check responses, such as the number of goroutines,
+// go version number, etc.
+func WithRuntimeInfo() option {
+	return func(cfg *healthCheckConfig) {
+		cfg.runtimeInfoEnabled = true
+	}
+}
+
 // WithTimeout globally defines a timeout duration for all checks. You can still override
 // this timeout by using the timeout value in the Check configuration.
 // Default value is 30 seconds.
