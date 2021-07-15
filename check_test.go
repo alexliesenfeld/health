@@ -315,16 +315,15 @@ func TestCheckExecuteListeners(t *testing.T) {
 	var (
 		actualStatus      *Status                = nil
 		actualResults     *map[string]CheckState = nil
-		expectedErrMsg                           = "test error"
+		expectedErr                              = fmt.Errorf("test error")
 		expectedCheckName                        = "testCheck"
-		//testStartedAt                             = time.Now()
 	)
 
 	checks := map[string]*Check{
 		expectedCheckName: {
 			Name: expectedCheckName,
 			Check: func(ctx context.Context) error {
-				return fmt.Errorf(expectedErrMsg)
+				return expectedErr
 			},
 		},
 	}
@@ -342,7 +341,10 @@ func TestCheckExecuteListeners(t *testing.T) {
 	// Assert
 	assert.Equal(t, StatusDown, *actualStatus)
 	assert.Equal(t, 1, len(*actualResults))
-	//assert.Equal(t, &expectedErrMsg, (*actualResults)[expectedCheckName].Error)
+	assert.Equal(t, expectedErr, (*actualResults)[expectedCheckName].LastResult)
 	assert.Equal(t, StatusDown, (*actualResults)[expectedCheckName].Status)
-	//assert.True(t, (*actualResults)[expectedCheckName].Timestamp.After(testStartedAt))
 }
+
+// TODO: Add test for updateState
+// TODO: Add test for updateCheckState
+// TODO: Add test for stateToCheckResult
