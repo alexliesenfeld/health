@@ -16,11 +16,11 @@ type checkerMock struct {
 	mock.Mock
 }
 
-func (ck *checkerMock) StartPeriodicChecks() {
+func (ck *checkerMock) Start() {
 	ck.Called()
 }
 
-func (ck *checkerMock) StopPeriodicChecks() {
+func (ck *checkerMock) Stop() {
 	ck.Called()
 }
 
@@ -29,30 +29,31 @@ func (ck *checkerMock) Check(ctx context.Context) aggregatedCheckStatus {
 	return args.Get(0).(aggregatedCheckStatus)
 }
 
-func TestStartPeriodicChecks(t *testing.T) {
+func TestStartHandler(t *testing.T) {
 	// Arrange
 	ckr := checkerMock{}
-	ckr.On("StartPeriodicChecks")
+	ckr.On("Start")
+	ckr.On("Check", mock.Anything).Return(aggregatedCheckStatus{})
 	handler := newHandler(healthCheckConfig{}, &ckr)
 
 	// Act
-	StartPeriodicChecks(handler)
+	handler.Start()
 
 	// Assert
-	ckr.Mock.AssertCalled(t, "StartPeriodicChecks")
+	ckr.Mock.AssertCalled(t, "Start")
 }
 
-func TestStopPeriodicChecks(t *testing.T) {
+func TestStopHandler(t *testing.T) {
 	// Arrange
 	ckr := checkerMock{}
-	ckr.On("StopPeriodicChecks")
+	ckr.On("Stop")
 	handler := newHandler(healthCheckConfig{}, &ckr)
 
 	// Act
-	StopPeriodicChecks(handler)
+	handler.Stop()
 
 	// Assert
-	ckr.Mock.AssertCalled(t, "StopPeriodicChecks")
+	ckr.Mock.AssertCalled(t, "Stop")
 }
 
 func doTestHandler(t *testing.T, cfg healthCheckConfig, expectedStatus aggregatedCheckStatus, expectedStatusCode int) {
@@ -88,7 +89,7 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 		},
 	}
 
-	// Use non-standard status codes
+	// Use non-standard Status codes
 	cfg := healthCheckConfig{statusCodeUp: http.StatusNoContent, statusCodeDown: http.StatusTeapot}
 
 	doTestHandler(t, cfg, status, http.StatusTeapot)
@@ -102,7 +103,7 @@ func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 		},
 	}
 
-	// Use non-standard status codes
+	// Use non-standard Status codes
 	cfg := healthCheckConfig{statusCodeUp: http.StatusNoContent, statusCodeDown: http.StatusTeapot}
 
 	doTestHandler(t, cfg, status, http.StatusNoContent)
@@ -117,7 +118,7 @@ func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
 		},
 	}
 
-	// Use non-standard status codes
+	// Use non-standard Status codes
 	cfg := healthCheckConfig{statusCodeUp: http.StatusNoContent, statusCodeDown: http.StatusTeapot}
 
 	doTestHandler(t, cfg, status, http.StatusTeapot)

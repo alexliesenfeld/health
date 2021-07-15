@@ -9,41 +9,42 @@ import (
 
 type (
 	healthCheckConfig struct {
-		detailsDisabled          bool
-		timeout                  time.Duration
-		statusCodeUp             int
-		statusCodeDown           int
-		checks                   []*Check
-		maxErrMsgLen             uint
-		cacheTTL                 time.Duration
-		manualPeriodicCheckStart bool
-		statusChangeListeners    []StatusChangeListener
-	}
-
-	checkState struct {
-		startedAt        time.Time
-		lastCheckedAt    time.Time
-		lastSuccessAt    time.Time
-		lastResult       error
-		consecutiveFails uint
+		detailsDisabled      bool
+		timeout              time.Duration
+		statusCodeUp         int
+		statusCodeDown       int
+		checks               map[string]*Check
+		maxErrMsgLen         uint
+		cacheTTL             time.Duration
+		withManualStart      bool
+		statusChangeListener SystemStatusListener
 	}
 
 	defaultChecker struct {
 		mtx      sync.Mutex
 		cfg      healthCheckConfig
-		state    map[string]checkState
+		state    map[string]CheckState
 		status   Status
 		endChans []chan *sync.WaitGroup
 	}
 
 	checkResult struct {
-		check    Check
-		newState checkState
+		checkName string
+		newState  CheckState
 	}
 
 	aggregatedCheckStatus struct {
 		Status  Status                  `json:"status"`
 		Details *map[string]CheckResult `json:"details,omitempty"`
+	}
+
+	CheckState struct {
+		LastCheckedAt    time.Time
+		LastSuccessAt    time.Time
+		LastResult       error
+		ConsecutiveFails uint
+		Status           Status
+		startedAt        time.Time
 	}
 
 	CheckResult struct {
@@ -52,7 +53,9 @@ type (
 		Error     *string   `json:"error,omitempty"`
 	}
 
-	StatusChangeListener func(status Status, checks map[string]CheckResult)
+	SystemStatusListener func(status Status, state map[string]CheckState)
+
+	CheckStatusListener func(name string, state CheckState)
 
 	Status string
 )
@@ -75,20 +78,22 @@ func (s Status) Criticality() int {
 }
 
 func newChecker(cfg healthCheckConfig) *defaultChecker {
-	state := map[string]checkState{}
+	state := map[string]CheckState{}
 	for _, check := range cfg.checks {
-		state[check.Name] = checkState{
+		state[check.Name] = CheckState{
 			startedAt: time.Now(),
+			Status:    StatusUnknown,
 		}
 	}
 	ckr := defaultChecker{sync.Mutex{}, cfg, state, StatusUnknown, []chan *sync.WaitGroup{}}
-	if !cfg.manualPeriodicCheckStart {
-		ckr.StartPeriodicChecks()
+	if !cfg.withManualStart {
+		ckr.Check(context.Background())
+		ckr.Start()
 	}
 	return &ckr
 }
 
-func (ck *defaultChecker) StartPeriodicChecks() {
+func (ck *defaultChecker) Start() {
 	ck.mtx.Lock()
 	defer ck.mtx.Unlock()
 
@@ -97,15 +102,15 @@ func (ck *defaultChecker) StartPeriodicChecks() {
 			var wg *sync.WaitGroup
 			endChan := make(chan *sync.WaitGroup, 1)
 			ck.endChans = append(ck.endChans, endChan)
-			go func(check Check, currentState checkState) {
+			go func(check Check, currentState CheckState) {
 			loop:
 				for {
 					currentState = doCheck(context.Background(), check, currentState).newState
 					ck.mtx.Lock()
-					ck.state[check.Name] = currentState
+					ck.updateState(checkResult{check.Name, currentState})
 					ck.mtx.Unlock()
 					select {
-					case <-time.After(check.refreshInterval):
+					case <-time.After(check.updateInterval):
 					case wg = <-endChan:
 						break loop
 					}
@@ -117,7 +122,7 @@ func (ck *defaultChecker) StartPeriodicChecks() {
 	}
 }
 
-func (ck *defaultChecker) StopPeriodicChecks() {
+func (ck *defaultChecker) Stop() {
 	ck.mtx.Lock()
 
 	var wg sync.WaitGroup
@@ -136,47 +141,66 @@ func (ck *defaultChecker) Check(ctx context.Context) aggregatedCheckStatus {
 	defer ck.mtx.Unlock()
 
 	var (
-		numChecks     = len(ck.cfg.checks)
-		resChan       = make(chan checkResult, numChecks)
-		results       = map[string]CheckResult{}
-		cacheTTL      = ck.cfg.cacheTTL
-		maxErrMsgLen  = ck.cfg.maxErrMsgLen
-		lastStatus    = ck.status
-		numPendingRes = 0
+		numChecks          = len(ck.cfg.checks)
+		resChan            = make(chan checkResult, numChecks)
+		cacheTTL           = ck.cfg.cacheTTL
+		numInitiatedChecks = 0
 	)
 
 	for _, c := range ck.cfg.checks {
 		state := ck.state[c.Name]
 		if !isPeriodicCheck(c) && isCacheExpired(cacheTTL, &state) {
-			numPendingRes++
-			go func(ctx context.Context, check Check, state checkState) {
+			numInitiatedChecks++
+			go func(ctx context.Context, check Check, state CheckState) {
 				resChan <- doCheck(ctx, check, state)
 			}(ctx, *c, state)
-		} else {
-			results[c.Name] = newCheckStatus(c, &state, maxErrMsgLen)
 		}
 	}
 
-	for numPendingRes > 0 {
-		res := <-resChan
-		ck.state[res.check.Name] = res.newState
-		results[res.check.Name] = newCheckStatus(&res.check, &res.newState, maxErrMsgLen)
-		numPendingRes--
+	var results []checkResult
+	for len(results) < numInitiatedChecks {
+		results = append(results, <-resChan)
 	}
 
-	ck.status = aggregateStatus(results)
+	ck.updateState(results...)
 
-	runStatusChangeListeners(ck.cfg.statusChangeListeners, lastStatus, ck.status, results)
-
-	return newAggregatedCheckStatus(ck.status, results, !ck.cfg.detailsDisabled)
+	return newAggregatedCheckStatus(ck.status, ck.stateToCheckResult(), !ck.cfg.detailsDisabled)
 }
 
-func runStatusChangeListeners(listeners []StatusChangeListener, old Status, current Status, results map[string]CheckResult) {
-	if old != current {
-		for _, listener := range listeners {
-			listener(current, results)
-		}
+func (ck *defaultChecker) updateState(updates ...checkResult) {
+	for _, update := range updates {
+		ck.updateCheckState(update)
 	}
+
+	oldStatus := ck.status
+	ck.status = aggregateStatus(ck.state)
+
+	if oldStatus != ck.status && ck.cfg.statusChangeListener != nil {
+		ck.cfg.statusChangeListener(ck.status, ck.state)
+	}
+}
+
+func (ck *defaultChecker) updateCheckState(res checkResult) {
+	var (
+		name      = res.checkName
+		newState  = res.newState
+		oldStatus = ck.state[name].Status
+		listener  = ck.cfg.checks[name].StatusListener
+	)
+
+	ck.state[name] = newState
+	if listener != nil && oldStatus != newState.Status {
+		listener(name, newState)
+	}
+}
+
+func (ck *defaultChecker) stateToCheckResult() map[string]CheckResult {
+	results := map[string]CheckResult{}
+	for _, c := range ck.cfg.checks {
+		state := ck.state[c.Name]
+		results[c.Name] = newCheckStatus(&state, ck.cfg.maxErrMsgLen)
+	}
+	return results
 }
 
 func newAggregatedCheckStatus(status Status, results map[string]CheckResult, withDetails bool) aggregatedCheckStatus {
@@ -187,31 +211,34 @@ func newAggregatedCheckStatus(status Status, results map[string]CheckResult, wit
 	return aggStatus
 }
 
-func isCacheExpired(cacheDuration time.Duration, state *checkState) bool {
-	return state.lastCheckedAt.Before(time.Now().Add(-cacheDuration))
+func isCacheExpired(cacheDuration time.Duration, state *CheckState) bool {
+	return state.LastCheckedAt.Before(time.Now().Add(-cacheDuration))
 }
 
 func isPeriodicCheck(check *Check) bool {
-	return check.refreshInterval > 0
+	return check.updateInterval > 0
 }
 
-func doCheck(ctx context.Context, check Check, state checkState) checkResult {
+func doCheck(ctx context.Context, check Check, state CheckState) checkResult {
 	cancel := func() {}
 	if check.Timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, check.Timeout)
 	}
 	defer cancel()
 
-	state.lastResult = executeCheckFunc(ctx, &check)
-	state.lastCheckedAt = time.Now().UTC()
-	if state.lastResult == nil {
-		state.consecutiveFails = 0
-		state.lastSuccessAt = state.lastCheckedAt
+	state.LastResult = executeCheckFunc(ctx, &check)
+	state.LastCheckedAt = time.Now().UTC()
+
+	if state.LastResult == nil {
+		state.ConsecutiveFails = 0
+		state.LastSuccessAt = state.LastCheckedAt
 	} else {
-		state.consecutiveFails++
+		state.ConsecutiveFails++
 	}
 
-	return checkResult{check, state}
+	state.Status = evaluateCheckStatus(&state, check.FailureTolerance, check.FailureToleranceThreshold)
+
+	return checkResult{check.Name, state}
 }
 
 func executeCheckFunc(ctx context.Context, check *Check) error {
@@ -228,11 +255,11 @@ func executeCheckFunc(ctx context.Context, check *Check) error {
 	}
 }
 
-func newCheckStatus(check *Check, state *checkState, maxErrMsgLen uint) CheckResult {
+func newCheckStatus(state *CheckState, maxErrMsgLen uint) CheckResult {
 	return CheckResult{
-		Status:    evaluateAvailabilityStatus(state, check.FailureTolerance, check.FailureToleranceThreshold),
-		Error:     toErrorDesc(state.lastResult, maxErrMsgLen),
-		Timestamp: state.lastCheckedAt,
+		Status:    state.Status,
+		Error:     toErrorDesc(state.LastResult, maxErrMsgLen),
+		Timestamp: state.LastCheckedAt,
 	}
 }
 
@@ -247,15 +274,15 @@ func toErrorDesc(err error, maxLen uint) *string {
 	return nil
 }
 
-func evaluateAvailabilityStatus(state *checkState, maxTimeInError time.Duration, maxFails uint) Status {
-	if state.lastCheckedAt.IsZero() {
+func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFails uint) Status {
+	if state.LastCheckedAt.IsZero() {
 		return StatusUnknown
-	} else if state.lastResult != nil {
+	} else if state.LastResult != nil {
 		maxTimeInErrorSinceStartPassed := state.startedAt.Add(maxTimeInError).Before(time.Now())
-		maxTimeInErrorSinceLastSuccessPassed := state.lastSuccessAt.Add(maxTimeInError).Before(time.Now())
+		maxTimeInErrorSinceLastSuccessPassed := state.LastSuccessAt.Add(maxTimeInError).Before(time.Now())
 
 		timeInErrorThresholdCrossed := maxTimeInErrorSinceStartPassed && maxTimeInErrorSinceLastSuccessPassed
-		failCountThresholdCrossed := state.consecutiveFails >= maxFails
+		failCountThresholdCrossed := state.ConsecutiveFails >= maxFails
 
 		if failCountThresholdCrossed && timeInErrorThresholdCrossed {
 			return StatusDown
@@ -264,7 +291,7 @@ func evaluateAvailabilityStatus(state *checkState, maxTimeInError time.Duration,
 	return StatusUp
 }
 
-func aggregateStatus(results map[string]CheckResult) Status {
+func aggregateStatus(results map[string]CheckState) Status {
 	status := StatusUp
 	for _, result := range results {
 		if result.Status.Criticality() > status.Criticality() {

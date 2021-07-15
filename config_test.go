@@ -11,22 +11,24 @@ import (
 
 func TestWithPeriodicCheckConfig(t *testing.T) {
 	// Arrange
-	cfg := healthCheckConfig{}
-	check := Check{Name: "test"}
+	expectedName := "test"
+	cfg := healthCheckConfig{checks: map[string]*Check{}}
+	check := Check{Name: expectedName}
 	interval := 5 * time.Second
 
 	// Act
 	WithPeriodicCheck(interval, check)(&cfg)
-	check.refreshInterval = interval
+	check.updateInterval = interval
 
 	// Assert
 	assert.Equal(t, 1, len(cfg.checks))
-	assert.True(t, reflect.DeepEqual(check, *cfg.checks[0]))
+	assert.True(t, reflect.DeepEqual(check, *cfg.checks[expectedName]))
 }
 
 func TestWithCheckConfig(t *testing.T) {
 	// Arrange
-	cfg := healthCheckConfig{}
+	expectedName := "test"
+	cfg := healthCheckConfig{checks: map[string]*Check{}}
 	check := Check{Name: "test"}
 
 	// Act
@@ -34,7 +36,7 @@ func TestWithCheckConfig(t *testing.T) {
 
 	// Assert
 	require.Equal(t, 1, len(cfg.checks))
-	assert.True(t, reflect.DeepEqual(&check, cfg.checks[0]))
+	assert.True(t, reflect.DeepEqual(&check, cfg.checks[expectedName]))
 }
 
 func TestWithCacheDurationConfig(t *testing.T) {
@@ -65,10 +67,10 @@ func TestWithManualPeriodicCheckStartConfig(t *testing.T) {
 	cfg := healthCheckConfig{}
 
 	// Act
-	WithManualPeriodicCheckStart()(&cfg)
+	WithManualStart()(&cfg)
 
 	// Assert
-	assert.True(t, cfg.manualPeriodicCheckStart)
+	assert.True(t, cfg.withManualStart)
 }
 
 func TestWithTimeoutStartConfig(t *testing.T) {
@@ -98,7 +100,7 @@ func TestWithCustomStatusCodesConfig(t *testing.T) {
 	cfg := healthCheckConfig{}
 
 	// Act
-	// Use of non standard status codes.
+	// Use of non standard Status codes.
 	WithCustomStatusCodes(http.StatusCreated, http.StatusBadGateway)(&cfg)
 
 	// Assert
@@ -111,12 +113,11 @@ func TestWithStatusChangeListenerConfig(t *testing.T) {
 	cfg := healthCheckConfig{}
 
 	// Act
-	// Use of non standard status codes.
-	WithStatusChangeListener(func(status Status, checks map[string]CheckResult) {})(&cfg)
-	WithStatusChangeListener(func(status Status, checks map[string]CheckResult) {})(&cfg)
+	// Use of non standard Status codes.
+	WithStatusListener(func(status Status, state map[string]CheckState) {})(&cfg)
 
 	// Assert
-	assert.Equal(t, 2, len(cfg.statusChangeListeners))
+	assert.NotNil(t, cfg.statusChangeListener)
 	// Not possible in Go to compare functions.
 }
 
@@ -129,7 +130,7 @@ func TestNewWithDefaults(t *testing.T) {
 	handler := NewHandler(opt)
 
 	// Assert
-	ckr := handler.(*healthCheckHandler).ckr.(*defaultChecker)
+	ckr := handler.ckr.(*defaultChecker)
 	assert.Equal(t, 1*time.Second, ckr.cfg.cacheTTL)
 	assert.Equal(t, 30*time.Second, ckr.cfg.timeout)
 	assert.Equal(t, uint(500), ckr.cfg.maxErrMsgLen)
