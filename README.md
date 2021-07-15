@@ -21,7 +21,16 @@
     <a href="https://github.com/alexliesenfeld/health/issues">Request Feature</a>
 </p>
 
-## Features
+## Table of Contents
+1. [Feature Overview](#feature-overview)
+1. [Getting Started](#getting-started)
+1. [Caching](#caching)
+1. [Periodic Checks](#periodic-checks)
+1. [Failure Tolerant Checks](#failure-tolerant-checks)
+1. [Listening for Status Changes](#listening-for-status-changes)
+1. [License](#license)
+
+## Feature Overview
 This library allows you to build health checks that do not simply return HTTP status code 200 but actually 
 check if all necessary components are healthy.
 
@@ -34,7 +43,7 @@ This library provides the following features:
 - Failure tolerance based on fail count and/or time thresholds.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) that can be easily used with a [mux](https://golang.org/pkg/net/http/#ServeMux).
 
-## Example
+## Getting Started
 ```go
 package main
 
@@ -137,6 +146,33 @@ app unhealthy by returning a failing health check, so that it can be automatical
 
 Failure tolerant health checks let you configure this kind of behaviour.
 
+## Listening for Status Changes
+It can be useful to react to health status changes. For example, you might want to log status changes, 
+so you can easier correlate logs during root cause analysis or perform actions to mitigate the impact 
+of an unhealthy component. 
+
+This library allows you to configure a listener function that will be called when either the overall health 
+status of the system changes or when the status of a component/check changes.
+
+### Exmample
+The exapmple below shows a configuration that adds 
+- a status listener to a check that will be called whenever the status of the check 
+  changes (e.g. from "up" to "down"), and
+- an overall system status listener, that will be called whenever the overall system status changes. 
+
+```go
+health.WithPeriodicCheck(5*time.Second, health.Check{
+        Name:   "search",
+        Check:  myCheckFunc,
+        StatusListener: func(name string, state health.CheckState) {
+            log.Printf("status of component %s changed to %s", name, state.Status)
+        },
+    }),
+
+    health.WithStatusListener(func(status health.Status, state map[string]health.CheckState) {
+        log.Printf("overall system health status changed to %s", status)
+    }),
+```
 ## License
 `health` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
 
