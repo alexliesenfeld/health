@@ -22,7 +22,7 @@
 </p>
 
 ## Table of Contents
-1. [Feature Overview](#feature-overview)
+1. [Features](#features)
 1. [Getting Started](#getting-started)
 1. [Caching](#caching)
 1. [Periodic Checks](#periodic-checks)
@@ -30,7 +30,7 @@
 1. [Listening for Status Changes](#listening-for-status-changes)
 1. [License](#license)
 
-## Feature Overview
+## Features
 This library allows you to build health checks that do not simply return HTTP status code 200 but actually 
 check if all necessary components are healthy.
 
