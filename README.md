@@ -151,8 +151,8 @@ It can be useful to react to health status changes. For example, you might want 
 so you can easier correlate logs during root cause analysis or perform actions to mitigate the impact 
 of an unhealthy component. 
 
-This library allows you to configure a listener function that will be called when either the overall health 
-status of the system changes or when the status of a component/check changes.
+This library allows you to configure listener functions that will be called either when the overall system health 
+status, or a component status changes.
 
 ### Exmample
 The exapmple below shows a configuration that adds 
