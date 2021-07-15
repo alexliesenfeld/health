@@ -56,8 +56,8 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Write HTTP response
 	disableResponseCache(w)
-	w.WriteHeader(mapHTTPStatus(&h.cfg, res.Status))
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(mapHTTPStatus(&h.cfg, res.Status))
 	w.Write(jsonResp)
 }
 
