@@ -109,6 +109,53 @@ yield a response with HTTP status code `503 (Service Unavailable)`, and the foll
 }
 ```
 
+### Standalone Checkers
+
+In some cases it can be useful to use the underlying Checker directly, for example to use a custom handler:
+
+```go
+package main
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"github.com/alexliesenfeld/health"
+	_ "github.com/mattn/go-sqlite3"
+	"time"
+)
+
+func main() {
+	db, _ := sql.Open("sqlite3", "simple.sqlite")
+	defer db.Close()
+
+	checker := health.NewChecker(
+
+      // Configure a global timeout that will be applied to all checks.
+      health.WithTimeout(10*time.Second),
+
+      // A simple check to see if database connection is up.
+      health.WithCheck(health.Check{
+        Name:  "database",
+        Timeout: 2*time.Second, // A check specific timeout.
+        Check: db.PingContext,
+      }),
+
+      // The following check will be executed periodically every 30 seconds.
+      health.WithPeriodicCheck(30*time.Second, health.Check{
+        Name: "search",
+        Check: func(ctx context.Context) error {
+          return fmt.Errorf("this makes the check fail")
+        },
+      }),
+	)
+
+	// ...
+	// use the checker
+	// ...
+}
+```
+
 ## Caching
 Health check responses are cached to avoid sending too many request to the services that your program checks
 and to mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set

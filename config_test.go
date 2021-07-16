@@ -1,12 +1,13 @@
 package health
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWithPeriodicCheckConfig(t *testing.T) {
@@ -131,6 +132,22 @@ func TestNewWithDefaults(t *testing.T) {
 
 	// Assert
 	ckr := handler.ckr.(*defaultChecker)
+	assert.Equal(t, 1*time.Second, ckr.cfg.cacheTTL)
+	assert.Equal(t, 30*time.Second, ckr.cfg.timeout)
+	assert.Equal(t, uint(500), ckr.cfg.maxErrMsgLen)
+	assert.True(t, configApplied)
+}
+
+func TestNewCheckerWithDefaults(t *testing.T) {
+	// Arrange
+	configApplied := false
+	opt := func(config *healthCheckConfig) { configApplied = true }
+
+	// Act
+	checker := NewChecker(opt)
+
+	// Assert
+	ckr := checker.(*defaultChecker)
 	assert.Equal(t, 1*time.Second, ckr.cfg.cacheTTL)
 	assert.Equal(t, 30*time.Second, ckr.cfg.timeout)
 	assert.Equal(t, uint(500), ckr.cfg.maxErrMsgLen)
