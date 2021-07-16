@@ -178,7 +178,7 @@ status, or a component status changes.
 
 ### Example
 
-The exapmple below shows a configuration that adds
+The example below shows a configuration that adds
 
 - a status listener to a check that will be called whenever the status of the check changes (e.g. from "up" to "down"),
   and
