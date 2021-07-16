@@ -18,12 +18,12 @@ type (
 		// Timeout will override the global timeout value, if it is smaller than
 		// the global timeout (see WithTimeout).
 		Timeout time.Duration
-		// FailureTolerance will set a duration for how long a service must be
-		// "in error" until it is considered unavailable.
-		FailureTolerance time.Duration
-		// FailureToleranceThreshold will set a maximum number of consecutive
+		// MaxTimeInError will set a duration for how long a service must be
+		// in an error state until it is considered unavailable.
+		MaxTimeInError time.Duration
+		// MaxConsecutiveFails will set a maximum number of consecutive
 		// check fails until the service is considered unavailable.
-		FailureToleranceThreshold uint
+		MaxConsecutiveFails uint
 		// StatusListener allows to set a listener that will be called
 		// whenever the AvailabilityStatus of the check changes.
 		StatusListener CheckStatusListener

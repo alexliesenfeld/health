@@ -240,7 +240,7 @@ func doCheck(ctx context.Context, check Check, state CheckState) checkResult {
 		state.ConsecutiveFails++
 	}
 
-	state.Status = evaluateCheckStatus(&state, check.FailureTolerance, check.FailureToleranceThreshold)
+	state.Status = evaluateCheckStatus(&state, check.MaxTimeInError, check.MaxConsecutiveFails)
 
 	return checkResult{check.Name, state}
 }
