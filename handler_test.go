@@ -38,7 +38,7 @@ func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatu
 	ckr := checkerMock{}
 	ckr.On("Check", mock.Anything).Return(expectedStatus)
 
-	handler := NewCustomHandler(&ckr, statusCodeUp, statusCodeDown)
+	handler := NewHandlerWithStatusCodes(&ckr, statusCodeUp, statusCodeDown)
 
 	// Act
 	handler.ServeHTTP(response, request)
@@ -57,7 +57,7 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 	err := "hello"
 	status := SystemStatus{
 		Status: StatusUnknown,
-		Details: &map[string]CheckResult{
+		Details: &map[string]CheckStatus{
 			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: &err},
 			"check2": {Status: StatusUp, Timestamp: time.Now().UTC(), Error: nil},
 		},
@@ -69,7 +69,7 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 	status := SystemStatus{
 		Status: StatusUp,
-		Details: &map[string]CheckResult{
+		Details: &map[string]CheckStatus{
 			"check1": {Status: StatusUp, Timestamp: time.Now().UTC(), Error: nil},
 		},
 	}
@@ -81,7 +81,7 @@ func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
 	err := "an error message"
 	status := SystemStatus{
 		Status: StatusDown,
-		Details: &map[string]CheckResult{
+		Details: &map[string]CheckStatus{
 			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: &err},
 		},
 	}

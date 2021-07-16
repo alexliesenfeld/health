@@ -19,7 +19,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	jsonResp, err := json.Marshal(res)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
@@ -46,10 +46,10 @@ func NewHandler(checker Checker) Handler {
 	return Handler{ckr: checker, statusCodeUp: http.StatusOK, statusCodeDown: http.StatusServiceUnavailable}
 }
 
-// NewCustomHandler creates a new health check http.Handler. If periodic checks have
+// NewHandlerWithStatusCodes creates a new health check http.Handler. If periodic checks have
 // been configured (see WithPeriodicCheck), they will be started as well
 // (if not explicitly turned off using WithManualStart).
-func NewCustomHandler(checker Checker, statusCodeUp int, statusCodeDown int) Handler {
+func NewHandlerWithStatusCodes(checker Checker, statusCodeUp int, statusCodeDown int) Handler {
 	return Handler{ckr: checker, statusCodeUp: statusCodeUp, statusCodeDown: statusCodeDown}
 }
 

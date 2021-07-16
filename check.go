@@ -41,7 +41,13 @@ type (
 
 	SystemStatus struct {
 		Status  AvailabilityStatus      `json:"status"`
-		Details *map[string]CheckResult `json:"details,omitempty"`
+		Details *map[string]CheckStatus `json:"details,omitempty"`
+	}
+
+	CheckStatus struct {
+		Status    AvailabilityStatus `json:"status"`
+		Timestamp time.Time          `json:"timestamp,omitempty"`
+		Error     *string            `json:"error,omitempty"`
 	}
 
 	CheckState struct {
@@ -51,12 +57,6 @@ type (
 		ConsecutiveFails uint
 		Status           AvailabilityStatus
 		startedAt        time.Time
-	}
-
-	CheckResult struct {
-		Status    AvailabilityStatus `json:"status"`
-		Timestamp time.Time          `json:"timestamp,omitempty"`
-		Error     *string            `json:"error,omitempty"`
 	}
 
 	SystemStatusListener func(status AvailabilityStatus, state map[string]CheckState)
@@ -198,8 +198,8 @@ func (ck *defaultChecker) updateCheckState(res checkResult) {
 	}
 }
 
-func (ck *defaultChecker) stateToCheckResult() map[string]CheckResult {
-	results := map[string]CheckResult{}
+func (ck *defaultChecker) stateToCheckResult() map[string]CheckStatus {
+	results := map[string]CheckStatus{}
 	for _, c := range ck.cfg.checks {
 		state := ck.state[c.Name]
 		results[c.Name] = newCheckStatus(&state, ck.cfg.maxErrMsgLen)
@@ -207,7 +207,7 @@ func (ck *defaultChecker) stateToCheckResult() map[string]CheckResult {
 	return results
 }
 
-func newSystemStatus(status AvailabilityStatus, results map[string]CheckResult, withDetails bool) SystemStatus {
+func newSystemStatus(status AvailabilityStatus, results map[string]CheckStatus, withDetails bool) SystemStatus {
 	aggStatus := SystemStatus{Status: status}
 	if withDetails {
 		aggStatus.Details = &results
@@ -259,8 +259,8 @@ func executeCheckFunc(ctx context.Context, check *Check) error {
 	}
 }
 
-func newCheckStatus(state *CheckState, maxErrMsgLen uint) CheckResult {
-	return CheckResult{
+func newCheckStatus(state *CheckState, maxErrMsgLen uint) CheckStatus {
+	return CheckStatus{
 		Status:    state.Status,
 		Error:     toErrorDesc(state.LastResult, maxErrMsgLen),
 		Timestamp: state.LastCheckedAt,

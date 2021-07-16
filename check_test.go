@@ -41,7 +41,7 @@ func TestStatusDownBeforeStatusUnknown(t *testing.T) {
 func TestNewAggregatedCheckStatusWithDetails(t *testing.T) {
 	// Arrange
 	errMsg := "this is an error message"
-	testData := map[string]CheckResult{"check1": {StatusDown, time.Now(), &errMsg}}
+	testData := map[string]CheckStatus{"check1": {StatusDown, time.Now(), &errMsg}}
 
 	// Act
 	result := newSystemStatus(StatusDown, testData, true)
@@ -53,7 +53,7 @@ func TestNewAggregatedCheckStatusWithDetails(t *testing.T) {
 
 func TestNewAggregatedCheckStatusWithoutDetails(t *testing.T) {
 	// Arrange
-	testData := map[string]CheckResult{}
+	testData := map[string]CheckStatus{}
 
 	// Act
 	result := newSystemStatus(StatusDown, testData, false)
