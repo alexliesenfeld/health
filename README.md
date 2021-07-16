@@ -87,9 +87,12 @@ func main() {
 		}),
 	)
 
+	// This will start periodic check goroutines and do a first check run 
+	// to test for an initial system health status.
 	checker.Start()
 
-	// Create a new http.Handler that provides health check information.
+	// We Create a new http.Handler that provides health check information
+	// serialized as a JOSN string via HTTP.
 	router := http.NewServeMux()
 	router.Handle("/health", health.NewHandler(checker))
 	http.ListenAndServe(":3000", router)
