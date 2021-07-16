@@ -129,11 +129,11 @@ default. If you do not want to use caching altogether, you can disable it using 
 
 When executing health check functions synchronously (i.e. for every HTTP request), the overall response delay will be at
 least as high as the one of your slowest check function. This is usually OK for smaller applications with a low number
-of quickly checkable dependencies and *with enabled caching*. This approach, however, will likely be problematic for
+of quickly checkable dependencies *and enabled caching*. This approach, however, will likely be problematic for
 more involved applications that either have many dependencies and/or some relatively slow check functions.
 
-Rather than executing a health check function on every request that is received over the health endpoint, periodic
-checks execute the check function on a fixed schedule. With this approach, the health status is always read from a local
+Rather than executing a health check functions on every request that is received over the health endpoint, periodic
+checks execute check functions on a fixed schedule. With this approach, the health status is always read from a local
 cache. It allows responding to HTTP requests instantly without waiting for the check function to complete.
 
 Periodic checks can be configured using the `WithPeriodicCheck` configuration option (see example above).
@@ -142,9 +142,6 @@ Periodic checks can be configured using the `WithPeriodicCheck` configuration op
 
 This library lets you configure failure tolerant checks that allow some degree of failure. The check is only considered
 failed, when predefined tolerance thresholds have been crossed.
-
-To allow some failure, please have a look at the `MaxTimeInError` and `MaxConsecutiveFails`
-attributes in your [check configuration](https://pkg.go.dev/github.com/alexliesenfeld/health#Check).
 
 ### Example
 
