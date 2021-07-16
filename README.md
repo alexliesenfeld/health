@@ -161,6 +161,17 @@ returning a failing health check, so that it can be automatically restarted by y
 
 Failure tolerant health checks let you configure this kind of behaviour.
 
+````go
+health.WithCheck(health.Check{
+    Name:    "unreliable-service",
+    // Check is allowed to fail up to 4 times until considered unavailable
+    MaxConsecutiveFails: 4,
+    // Check is allowed to fail for up to 1 minute until considered unavailable.
+    MaxTimeInError:      1 * time.Minute,
+    Check: myCheckFunc,
+}),
+````
+
 ## Listening for Status Changes
 
 It can be useful to react to health status changes. For example, you might want to log status changes, so you can easier
