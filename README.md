@@ -175,15 +175,15 @@ The exapmple below shows a configuration that adds
 
 ```go
 health.WithPeriodicCheck(5*time.Second, health.Check{
-Name:   "search",
-Check:  myCheckFunc,
-StatusListener: func (name string, state health.CheckState) {
-log.Printf("status of component %s changed to %s", name, state.Status)
-},
+    Name:   "search",
+    Check:  myCheckFunc,
+    StatusListener: func (name string, state health.CheckState) {
+        log.Printf("status of component %s changed to %s", name, state.Status)
+    },
 }),
 
 health.WithStatusListener(func (status health.Status, state map[string]health.CheckState) {
-log.Printf("overall system health status changed to %s", status)
+	log.Printf("overall system health status changed to %s", status)
 }),
 ```
 
