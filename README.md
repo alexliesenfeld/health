@@ -43,8 +43,8 @@ This library provides the following features:
 - Caching (to avoid sending too many requests to downstream services).
 - Custom HTTP request middleware for pre- and postprocessing HTTP requests and/or responses.
 - Failure tolerance based on fail count and/or time thresholds.
-- Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) that 
-  can be easily used with a [mux](https://golang.org/pkg/net/http/#ServeMux).
+- Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) that can be easily used with
+  a [mux](https://golang.org/pkg/net/http/#ServeMux).
 
 ## Getting Started
 
@@ -93,8 +93,8 @@ func main() {
 
 	// We Create a new http.Handler that provides health check information
 	// serialized as a JSON string via HTTP.
-    http.Handle("/health", health.NewHandler(checker))
-    http.ListenAndServe(":3000", nil)
+	http.Handle("/health", health.NewHandler(checker))
+	http.ListenAndServe(":3000", nil)
 }
 ```
 
@@ -175,15 +175,15 @@ The exapmple below shows a configuration that adds
 
 ```go
 health.WithPeriodicCheck(5*time.Second, health.Check{
-    Name:   "search",
-    Check:  myCheckFunc,
-    StatusListener: func (name string, state health.CheckState) {
-        log.Printf("status of component %s changed to %s", name, state.Status)
-    },
+Name:   "search",
+Check:  myCheckFunc,
+StatusListener: func (name string, state health.CheckState) {
+log.Printf("status of component %s changed to %s", name, state.Status)
+},
 }),
 
 health.WithStatusListener(func (status health.Status, state map[string]health.CheckState) {
-    log.Printf("overall system health status changed to %s", status)
+log.Printf("overall system health status changed to %s", status)
 }),
 ```
 
