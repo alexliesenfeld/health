@@ -81,10 +81,6 @@ func main() {
 		// The following check will be executed periodically every 30 seconds.
 		health.WithPeriodicCheck(30*time.Second, health.Check{
 			Name: "search",
-			// Check is allowed to fail up to 4 times until considered unavailable
-			MaxConsecutiveFails: 4,
-			// Check is allowed to fail for up to 1 minute until considered unavailable.
-			MaxTimeInError:      1 * time.Minute,
 			Check: func(ctx context.Context) error {
 				return fmt.Errorf("this makes the check fail")
 			},
