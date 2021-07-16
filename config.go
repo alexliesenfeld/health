@@ -10,23 +10,23 @@ type (
 	// Check allows to configure health checks.
 	Check struct {
 		// The Name must be unique among all checks. Name is a required attribute.
-		Name string
+		Name string // Required
 		// Check is the check function that will be executed to check availability.
 		// This function must return an error if the checked service is considered
 		// not available. Check is a required attribute.
-		Check func(ctx context.Context) error
+		Check func(ctx context.Context) error // Required
 		// Timeout will override the global timeout value, if it is smaller than
 		// the global timeout (see WithTimeout).
-		Timeout time.Duration
+		Timeout time.Duration // Optional
 		// MaxTimeInError will set a duration for how long a service must be
 		// in an error state until it is considered unavailable.
-		MaxTimeInError time.Duration
+		MaxTimeInError time.Duration // Optional
 		// MaxConsecutiveFails will set a maximum number of consecutive
 		// check fails until the service is considered unavailable.
-		MaxConsecutiveFails uint
+		MaxConsecutiveFails uint // Optional
 		// StatusListener allows to set a listener that will be called
 		// whenever the AvailabilityStatus of the check changes.
-		StatusListener CheckStatusListener
+		StatusListener CheckStatusListener // Optional
 		updateInterval time.Duration
 	}
 
