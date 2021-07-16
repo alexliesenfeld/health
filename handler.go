@@ -9,14 +9,8 @@ import (
 type (
 	Handler struct {
 		http.Handler
-		ckr checker
+		ckr Checker
 		cfg healthCheckConfig
-	}
-
-	checker interface {
-		Start()
-		Stop()
-		Check(ctx context.Context) aggregatedCheckStatus
 	}
 )
 
@@ -70,7 +64,7 @@ func disableResponseCache(w http.ResponseWriter) {
 	w.Header().Set("Expires", "-1")
 }
 
-func newHandler(cfg healthCheckConfig, ckr checker) Handler {
+func newHandler(cfg healthCheckConfig, ckr Checker) Handler {
 	return Handler{ckr: ckr, cfg: cfg}
 }
 

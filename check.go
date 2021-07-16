@@ -8,6 +8,12 @@ import (
 )
 
 type (
+	Checker interface {
+		Start()
+		Stop()
+		Check(ctx context.Context) AggregatedCheckStatus
+	}
+
 	healthCheckConfig struct {
 		detailsDisabled      bool
 		timeout              time.Duration
@@ -33,7 +39,7 @@ type (
 		newState  CheckState
 	}
 
-	aggregatedCheckStatus struct {
+	AggregatedCheckStatus struct {
 		Status  Status                  `json:"status"`
 		Details *map[string]CheckResult `json:"details,omitempty"`
 	}
@@ -136,7 +142,7 @@ func (ck *defaultChecker) Stop() {
 	wg.Wait()
 }
 
-func (ck *defaultChecker) Check(ctx context.Context) aggregatedCheckStatus {
+func (ck *defaultChecker) Check(ctx context.Context) AggregatedCheckStatus {
 	ck.mtx.Lock()
 	defer ck.mtx.Unlock()
 
@@ -203,8 +209,8 @@ func (ck *defaultChecker) stateToCheckResult() map[string]CheckResult {
 	return results
 }
 
-func newAggregatedCheckStatus(status Status, results map[string]CheckResult, withDetails bool) aggregatedCheckStatus {
-	aggStatus := aggregatedCheckStatus{Status: status}
+func newAggregatedCheckStatus(status Status, results map[string]CheckResult, withDetails bool) AggregatedCheckStatus {
+	aggStatus := AggregatedCheckStatus{Status: status}
 	if withDetails {
 		aggStatus.Details = &results
 	}

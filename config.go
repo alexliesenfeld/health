@@ -59,6 +59,37 @@ func NewHandler(options ...option) Handler {
 	return handler
 }
 
+// NewChecker creates a standalone health checker. If periodic checks have
+// been configured (see WithPeriodicCheck), they will be started as well
+// (if not explicitly turned off using WithManualStart).
+// It operates in the same way as NewHandler but returning the Checker directly instead of the handler.
+func NewChecker(options ...option) Checker {
+	cfg := healthCheckConfig{
+		statusCodeUp:   http.StatusOK,
+		statusCodeDown: http.StatusServiceUnavailable,
+		cacheTTL:       1 * time.Second,
+		timeout:        30 * time.Second,
+		maxErrMsgLen:   500,
+		checks:         map[string]*Check{},
+	}
+
+	for _, opt := range options {
+		opt(&cfg)
+	}
+
+	checker := newChecker(cfg)
+
+	if !cfg.withManualStart {
+		ctx, cancel := context.WithTimeout(context.Background(), cfg.timeout)
+		defer cancel()
+
+		checker.Start()
+		checker.Check(ctx)
+	}
+
+	return checker
+}
+
 // WithMaxErrorMessageLength limits maximum number of characters
 // in error messages.
 func WithMaxErrorMessageLength(length uint) option {

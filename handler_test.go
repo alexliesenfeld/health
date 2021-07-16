@@ -3,13 +3,14 @@ package health
 import (
 	"context"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 type checkerMock struct {
@@ -24,16 +25,16 @@ func (ck *checkerMock) Stop() {
 	ck.Called()
 }
 
-func (ck *checkerMock) Check(ctx context.Context) aggregatedCheckStatus {
+func (ck *checkerMock) Check(ctx context.Context) AggregatedCheckStatus {
 	args := ck.Called(ctx)
-	return args.Get(0).(aggregatedCheckStatus)
+	return args.Get(0).(AggregatedCheckStatus)
 }
 
 func TestStartHandler(t *testing.T) {
 	// Arrange
 	ckr := checkerMock{}
 	ckr.On("Start")
-	ckr.On("Check", mock.Anything).Return(aggregatedCheckStatus{})
+	ckr.On("Check", mock.Anything).Return(AggregatedCheckStatus{})
 	handler := newHandler(healthCheckConfig{}, &ckr)
 
 	// Act
@@ -56,7 +57,7 @@ func TestStopHandler(t *testing.T) {
 	ckr.Mock.AssertCalled(t, "Stop")
 }
 
-func doTestHandler(t *testing.T, cfg healthCheckConfig, expectedStatus aggregatedCheckStatus, expectedStatusCode int) {
+func doTestHandler(t *testing.T, cfg healthCheckConfig, expectedStatus AggregatedCheckStatus, expectedStatusCode int) {
 	// Arrange
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "https://localhost/foo", nil)
@@ -74,14 +75,14 @@ func doTestHandler(t *testing.T, cfg healthCheckConfig, expectedStatus aggregate
 	assert.Equal(t, response.Header().Get("content-type"), "application/json; charset=utf-8")
 	assert.Equal(t, response.Result().StatusCode, expectedStatusCode)
 
-	result := aggregatedCheckStatus{}
+	result := AggregatedCheckStatus{}
 	_ = json.Unmarshal(response.Body.Bytes(), &result)
 	assert.True(t, reflect.DeepEqual(result, expectedStatus))
 }
 
 func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 	err := "hello"
-	status := aggregatedCheckStatus{
+	status := AggregatedCheckStatus{
 		Status: StatusUnknown,
 		Details: &map[string]CheckResult{
 			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: &err},
@@ -96,7 +97,7 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 }
 
 func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
-	status := aggregatedCheckStatus{
+	status := AggregatedCheckStatus{
 		Status: StatusUp,
 		Details: &map[string]CheckResult{
 			"check1": {Status: StatusUp, Timestamp: time.Now().UTC(), Error: nil},
@@ -111,7 +112,7 @@ func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 
 func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
 	err := "an error message"
-	status := aggregatedCheckStatus{
+	status := AggregatedCheckStatus{
 		Status: StatusDown,
 		Details: &map[string]CheckResult{
 			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: &err},
@@ -132,7 +133,7 @@ func TestWithGlobalTimeout(t *testing.T) {
 
 	ckr := checkerMock{}
 	ckr.On("Check", mock.Anything).
-		Return(aggregatedCheckStatus{}).
+		Return(AggregatedCheckStatus{}).
 		Run(func(args mock.Arguments) {
 			ctx := args.Get(0).(context.Context)
 			deadline, ok = ctx.Deadline()
