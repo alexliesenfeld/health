@@ -92,10 +92,9 @@ func main() {
 	checker.Start()
 
 	// We Create a new http.Handler that provides health check information
-	// serialized as a JOSN string via HTTP.
-	router := http.NewServeMux()
-	router.Handle("/health", health.NewHandler(checker))
-	http.ListenAndServe(":3000", router)
+	// serialized as a JSON string via HTTP.
+    http.Handle("/health", health.NewHandler(checker))
+    http.ListenAndServe(":3000", nil)
 }
 ```
 
