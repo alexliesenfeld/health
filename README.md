@@ -182,7 +182,7 @@ health.WithPeriodicCheck(5*time.Second, health.Check{
     },
 }),
 
-health.WithStatusListener(func (status health.Status, state map[string]health.CheckState) {
+health.WithStatusListener(func (status health.AvailabilityStatus, state map[string]health.CheckState) {
 	log.Printf("overall system health status changed to %s", status)
 }),
 ```
