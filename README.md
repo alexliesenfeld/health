@@ -176,7 +176,7 @@ correlate logs during root cause analysis or perform actions to mitigate the imp
 This library allows you to configure listener functions that will be called either when the overall system health
 status, or a component status changes.
 
-### Exmample
+### Example
 
 The exapmple below shows a configuration that adds
 
