@@ -314,8 +314,8 @@ func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFai
 	if state.LastCheckedAt.IsZero() {
 		return StatusUnknown
 	} else if state.LastResult != nil {
-		maxTimeInErrorSinceStartPassed := state.startedAt.Add(maxTimeInError).Before(time.Now())
-		maxTimeInErrorSinceLastSuccessPassed := state.LastSuccessAt.Add(maxTimeInError).Before(time.Now())
+		maxTimeInErrorSinceStartPassed := !state.startedAt.Add(maxTimeInError).After(time.Now())
+		maxTimeInErrorSinceLastSuccessPassed := !state.LastSuccessAt.Add(maxTimeInError).After(time.Now())
 
 		timeInErrorThresholdCrossed := maxTimeInErrorSinceStartPassed && maxTimeInErrorSinceLastSuccessPassed
 		failCountThresholdCrossed := state.ConsecutiveFails >= maxFails
