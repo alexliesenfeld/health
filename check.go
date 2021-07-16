@@ -168,7 +168,7 @@ func (ck *defaultChecker) Check(ctx context.Context) SystemStatus {
 
 	ck.updateState(results...)
 
-	return newAggregatedCheckStatus(ck.status, ck.stateToCheckResult(), !ck.cfg.detailsDisabled)
+	return newSystemStatus(ck.status, ck.stateToCheckResult(), !ck.cfg.detailsDisabled)
 }
 
 func (ck *defaultChecker) updateState(updates ...checkResult) {
@@ -207,7 +207,7 @@ func (ck *defaultChecker) stateToCheckResult() map[string]CheckResult {
 	return results
 }
 
-func newAggregatedCheckStatus(status AvailabilityStatus, results map[string]CheckResult, withDetails bool) SystemStatus {
+func newSystemStatus(status AvailabilityStatus, results map[string]CheckResult, withDetails bool) SystemStatus {
 	aggStatus := SystemStatus{Status: status}
 	if withDetails {
 		aggStatus.Details = &results

@@ -44,7 +44,7 @@ func TestNewAggregatedCheckStatusWithDetails(t *testing.T) {
 	testData := map[string]CheckResult{"check1": {StatusDown, time.Now(), &errMsg}}
 
 	// Act
-	result := newAggregatedCheckStatus(StatusDown, testData, true)
+	result := newSystemStatus(StatusDown, testData, true)
 
 	// Assert
 	assert.Equal(t, StatusDown, result.Status)
@@ -56,7 +56,7 @@ func TestNewAggregatedCheckStatusWithoutDetails(t *testing.T) {
 	testData := map[string]CheckResult{}
 
 	// Act
-	result := newAggregatedCheckStatus(StatusDown, testData, false)
+	result := newSystemStatus(StatusDown, testData, false)
 
 	// Assert
 	assert.Equal(t, StatusDown, result.Status)
