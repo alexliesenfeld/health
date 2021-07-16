@@ -50,7 +50,7 @@ func NewChecker(options ...option) Checker {
 		opt(&cfg)
 	}
 
-	return newChecker(cfg)
+	return newDefaultChecker(cfg)
 }
 
 // WithMaxErrorMessageLength limits maximum number of characters

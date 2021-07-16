@@ -8,12 +8,6 @@ import (
 )
 
 type (
-	Checker interface {
-		Start()
-		Stop()
-		Check(ctx context.Context) SystemStatus
-	}
-
 	healthCheckConfig struct {
 		detailsDisabled      bool
 		timeout              time.Duration
@@ -37,6 +31,12 @@ type (
 	checkResult struct {
 		checkName string
 		newState  CheckState
+	}
+
+	Checker interface {
+		Start()
+		Stop()
+		Check(ctx context.Context) SystemStatus
 	}
 
 	SystemStatus struct {
@@ -83,7 +83,7 @@ func (s AvailabilityStatus) Criticality() int {
 	}
 }
 
-func newChecker(cfg healthCheckConfig) *defaultChecker {
+func newDefaultChecker(cfg healthCheckConfig) *defaultChecker {
 	state := map[string]CheckState{}
 	for _, check := range cfg.checks {
 		state[check.Name] = CheckState{

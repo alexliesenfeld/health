@@ -139,7 +139,7 @@ func TestToErrorDescNoError(t *testing.T) {
 }
 
 func TestStartStopManualPeriodicChecks(t *testing.T) {
-	ckr := newChecker(healthCheckConfig{
+	ckr := newDefaultChecker(healthCheckConfig{
 		withManualStart: true,
 		checks: map[string]*Check{
 			"check": {
@@ -266,7 +266,7 @@ func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err erro
 		},
 	}
 
-	ckr := newChecker(healthCheckConfig{checks: checks, timeout: 10 * time.Second})
+	ckr := newDefaultChecker(healthCheckConfig{checks: checks, timeout: 10 * time.Second})
 
 	// Act
 	res := ckr.Check(context.Background())
@@ -315,7 +315,7 @@ func TestCheckExecuteListeners(t *testing.T) {
 		actualResults = &state
 	}
 
-	ckr := newChecker(healthCheckConfig{
+	ckr := newDefaultChecker(healthCheckConfig{
 		checks:               checks,
 		statusChangeListener: listener,
 		maxErrMsgLen:         10,
