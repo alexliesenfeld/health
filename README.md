@@ -87,8 +87,8 @@ func main() {
 		}),
 	)
 
-	// This will start periodic check goroutines and do a first check run 
-	// to test for an initial system health status.
+	// This will start periodic checks and do a first health check
+	// to test for an initial system status.
 	checker.Start()
 
 	// We Create a new http.Handler that provides health check information
