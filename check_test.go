@@ -334,4 +334,4 @@ func TestCheckExecuteListeners(t *testing.T) {
 
 // TODO: Add test for updateState
 // TODO: Add test for updateCheckState
-// TODO: Add test for stateToCheckResult
+// TODO: Add test for mapStateToCheckStatus

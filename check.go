@@ -33,16 +33,17 @@ type (
 		newState  CheckState
 	}
 
-	// Checker is the main checker interface.
+	// Checker is the main checker interface and it encapsulates all
+	// health checking logic.
 	Checker interface {
-		// Start starts all periodic checks and prepares the
-		// checker for accepting check requests.
+		// Start will start all periodic checks and prepares the
+		// checker for accepting health check requests.
 		Start()
-		// Stop stops all periodic checks.
+		// Stop stops will stop the checker (i.e. all periodic checks).
 		Stop()
-		// Check performs a health check. The context may contain
-		// deadlines to which will be adhered to and will be
-		// passed to downstream calls.
+		// Check performs a health check. I expects a context, that
+		// may contain deadlines to which will be adhered to. The context
+		// will be passed to downstream calls.
 		Check(ctx context.Context) SystemStatus
 	}
 
@@ -200,7 +201,7 @@ func (ck *defaultChecker) Check(ctx context.Context) SystemStatus {
 
 	ck.updateState(results...)
 
-	return newSystemStatus(ck.status, ck.stateToCheckResult(), !ck.cfg.detailsDisabled)
+	return newSystemStatus(ck.status, ck.mapStateToCheckStatus(), !ck.cfg.detailsDisabled)
 }
 
 func (ck *defaultChecker) updateState(updates ...checkResult) {
@@ -230,7 +231,7 @@ func (ck *defaultChecker) updateCheckState(res checkResult) {
 	}
 }
 
-func (ck *defaultChecker) stateToCheckResult() map[string]CheckStatus {
+func (ck *defaultChecker) mapStateToCheckStatus() map[string]CheckStatus {
 	results := map[string]CheckStatus{}
 	for _, c := range ck.cfg.checks {
 		state := ck.state[c.Name]
