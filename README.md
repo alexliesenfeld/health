@@ -28,7 +28,7 @@
 1. [Caching](#caching)
 1. [Periodic Checks](#periodic-checks)
 1. [Failure Tolerant Checks](#failure-tolerant-checks)
-1. [Listening for Status Changes](#listening-for-status-changes)
+1. [Listening to Status Changes](#listening-to-status-changes)
 1. [License](#license)
 
 ## Features
@@ -165,7 +165,7 @@ health.WithCheck(health.Check{
 }),
 ````
 
-## Listening for Status Changes
+## Listening to Status Changes
 
 It can be useful to react to health status changes. For example, you might want to log status changes, so you can easier
 correlate logs during root cause analysis or perform actions to mitigate the impact of an unhealthy component.
