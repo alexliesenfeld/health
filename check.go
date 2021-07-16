@@ -33,46 +33,78 @@ type (
 		newState  CheckState
 	}
 
+	// Checker is the main checker interface.
 	Checker interface {
+		// Start starts all periodic checks and prepares the
+		// checker for accepting check requests.
 		Start()
+		// Stop stops all periodic checks.
 		Stop()
+		// Check performs a health check. The context may contain
+		// deadlines to which will be adhered to and will be
+		// passed to downstream calls.
 		Check(ctx context.Context) SystemStatus
 	}
 
+	// SystemStatus holds the aggregated system health information.
 	SystemStatus struct {
-		Status  AvailabilityStatus      `json:"status"`
+		// Status is the aggregated availability status of the system.
+		Status AvailabilityStatus `json:"status"`
+		// Details contains health information about all checked components.
 		Details *map[string]CheckStatus `json:"details,omitempty"`
 	}
 
+	// CheckStatus holds the a components health information.
 	CheckStatus struct {
-		Status    AvailabilityStatus `json:"status"`
-		Timestamp time.Time          `json:"timestamp,omitempty"`
-		Error     *string            `json:"error,omitempty"`
+		// Status is the availability status of a component.
+		Status AvailabilityStatus `json:"status"`
+		// Timestamp holds the time when the check happened.
+		Timestamp time.Time `json:"timestamp,omitempty"`
+		// Error contains the error message, if a check was not successful.
+		Error *string `json:"error,omitempty"`
 	}
 
+	// CheckState contains all state attributes of a components check.
 	CheckState struct {
-		LastCheckedAt    time.Time
-		LastSuccessAt    time.Time
-		LastResult       error
+		// LastCheckedAt holds the time of when the check was last executed.
+		LastCheckedAt time.Time
+		// LastCheckedAt holds the last time of when the check was "up".
+		LastSuccessAt time.Time
+		// LastResult holds the error of the last check (is nil if successful).
+		LastResult error
+		// ConsecutiveFails holds the number of how often the check failed in a row.
 		ConsecutiveFails uint
-		Status           AvailabilityStatus
-		startedAt        time.Time
+		// The current availability status of the check.
+		Status    AvailabilityStatus
+		startedAt time.Time
 	}
 
+	// SystemStatusListener is a callback function that will be called
+	// when the system availability status changes (e.g. from "up" to "down").
 	SystemStatusListener func(status AvailabilityStatus, state map[string]CheckState)
 
+	// CheckStatusListener is a callback function that will be called
+	// when a components availability status changes (e.g. from "up" to "down").
 	CheckStatusListener func(name string, state CheckState)
 
+	// AvailabilityStatus expresses the availability of either
+	// a component or the whole system.
 	AvailabilityStatus string
 )
 
 const (
+	// StatusUnknown holds the information that the availability
+	// status is not known yet, because no check was yet.
 	StatusUnknown AvailabilityStatus = "unknown"
-	StatusUp      AvailabilityStatus = "up"
-	StatusDown    AvailabilityStatus = "down"
+	// StatusUp holds the information that the system or component
+	// is available.
+	StatusUp AvailabilityStatus = "up"
+	// StatusDown holds the information that the system or component
+	// is not available.
+	StatusDown AvailabilityStatus = "down"
 )
 
-func (s AvailabilityStatus) Criticality() int {
+func (s AvailabilityStatus) criticality() int {
 	switch s {
 	case StatusDown:
 		return 2
@@ -298,7 +330,7 @@ func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFai
 func aggregateStatus(results map[string]CheckState) AvailabilityStatus {
 	status := StatusUp
 	for _, result := range results {
-		if result.Status.Criticality() > status.Criticality() {
+		if result.Status.criticality() > status.criticality() {
 			status = result.Status
 		}
 	}
