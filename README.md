@@ -74,13 +74,17 @@ func main() {
 		// A simple check to see if database connection is up.
 		health.WithCheck(health.Check{
 			Name:    "database",
-			Timeout: 2 * time.Second, // A check specific timeout.
+			Timeout: 2 * time.Second, // A a check specific timeout.
 			Check:   db.PingContext,
 		}),
 
 		// The following check will be executed periodically every 30 seconds.
 		health.WithPeriodicCheck(30*time.Second, health.Check{
 			Name: "search",
+			// Check is allowed to fail up to 4 times until considered unavailable
+			MaxConsecutiveFails: 4,
+			// Check is allowed to fail for up to 1 minute until considered unavailable.
+			MaxTimeInError:      1 * time.Minute,
 			Check: func(ctx context.Context) error {
 				return fmt.Errorf("this makes the check fail")
 			},
@@ -143,7 +147,7 @@ Periodic checks can be configured using the `WithPeriodicCheck` configuration op
 This library lets you configure failure tolerant checks that allow some degree of failure. The check is only considered
 failed, when predefined tolerance thresholds have been crossed.
 
-To allow some failure, please have a look at the `FailureTolerance` and `FailureToleranceThreshold`
+To allow some failure, please have a look at the `MaxTimeInError` and `MaxConsecutiveFails`
 attributes in your [check configuration](https://pkg.go.dev/github.com/alexliesenfeld/health#Check).
 
 ### Example
