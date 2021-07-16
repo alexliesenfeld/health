@@ -25,7 +25,7 @@ type (
 		// check fails until the service is considered unavailable.
 		FailureToleranceThreshold uint
 		// StatusListener allows to set a listener that will be called
-		// whenever the Status of the check changes.
+		// whenever the AvailabilityStatus of the check changes.
 		StatusListener CheckStatusListener
 		updateInterval time.Duration
 	}
@@ -33,35 +33,8 @@ type (
 	option func(*healthCheckConfig)
 )
 
-// NewHandler creates a new health check http.Handler. If periodic checks have
-// been configured (see WithPeriodicCheck), they will be started as well
-// (if not explicitly turned off using WithManualStart).
-func NewHandler(options ...option) Handler {
-	cfg := healthCheckConfig{
-		statusCodeUp:   http.StatusOK,
-		statusCodeDown: http.StatusServiceUnavailable,
-		cacheTTL:       1 * time.Second,
-		timeout:        30 * time.Second,
-		maxErrMsgLen:   500,
-		checks:         map[string]*Check{},
-	}
-
-	for _, opt := range options {
-		opt(&cfg)
-	}
-
-	handler := newHandler(cfg, newChecker(cfg))
-
-	if !cfg.withManualStart {
-		handler.Start()
-	}
-
-	return handler
-}
-
 // NewChecker creates a standalone health checker. If periodic checks have
-// been configured (see WithPeriodicCheck), they will be started as well
-// (if not explicitly turned off using WithManualStart).
+// been configured (see WithPeriodicCheck) or if automatic start is explicitly turned off using WithManualStart).
 // It operates in the same way as NewHandler but returning the Checker directly instead of the handler.
 func NewChecker(options ...option) Checker {
 	cfg := healthCheckConfig{
@@ -77,17 +50,7 @@ func NewChecker(options ...option) Checker {
 		opt(&cfg)
 	}
 
-	checker := newChecker(cfg)
-
-	if !cfg.withManualStart {
-		ctx, cancel := context.WithTimeout(context.Background(), cfg.timeout)
-		defer cancel()
-
-		checker.Start()
-		checker.Check(ctx)
-	}
-
-	return checker
+	return newChecker(cfg)
 }
 
 // WithMaxErrorMessageLength limits maximum number of characters
@@ -98,8 +61,8 @@ func WithMaxErrorMessageLength(length uint) option {
 	}
 }
 
-// WithDisabledDetails disables hides all data in the JSON response body but the the Status itself.
-// Example: { "Status":"down" }
+// WithDisabledDetails disables hides all data in the JSON response body but the the AvailabilityStatus itself.
+// Example: { "AvailabilityStatus":"down" }
 func WithDisabledDetails() option {
 	return func(cfg *healthCheckConfig) {
 		cfg.detailsDisabled = true
@@ -115,18 +78,8 @@ func WithTimeout(timeout time.Duration) option {
 	}
 }
 
-// WithCustomStatusCodes allows to set custom HTTP Status code for the case when the system is evaluated to be
-// up or down (based on check results).
-// Default values are statusCodeUp = 200 (OK) and statusCodeDown = 503 (Service Unavailable).
-func WithCustomStatusCodes(statusCodeUp int, statusCodeDown int) option {
-	return func(cfg *healthCheckConfig) {
-		cfg.statusCodeUp = statusCodeUp
-		cfg.statusCodeDown = statusCodeDown
-	}
-}
-
 // WithStatusListener registers a handler function that will be called whenever the overall system health
-// Status changes. Attention: Ideally, this method should be quick and not block for too long.
+// AvailabilityStatus changes. Attention: Ideally, this method should be quick and not block for too long.
 func WithStatusListener(listener SystemStatusListener) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.statusChangeListener = listener
@@ -160,7 +113,7 @@ func WithCacheDuration(duration time.Duration) option {
 	}
 }
 
-// WithCheck adds a new health check that contributes to the overall service availability Status.
+// WithCheck adds a new health check that contributes to the overall service availability AvailabilityStatus.
 // This check will be triggered each time the health check HTTP endpoint is called (and the
 // cache has expired, see WithCacheDuration). If health checks are expensive or
 // you expect a lot of calls to the health endpoint, consider using WithPeriodicCheck instead.
@@ -170,14 +123,14 @@ func WithCheck(check Check) option {
 	}
 }
 
-// WithPeriodicCheck adds a new health check that contributes to the overall service availability Status.
+// WithPeriodicCheck adds a new health check that contributes to the overall service availability AvailabilityStatus.
 // The health check will be performed on a fixed schedule and will not be executed for each HTTP request
 // (as in contrast to WithCheck). This allows to process a much higher number of HTTP requests without
 // actually calling the checked services too often or to execute long running checks.
 // The health endpoint always returns the last result of the periodic check.
 // When periodic checks are started (happens automatically if WithManualStart is not used)
 // they are also executed for the first time. Until all periodic checks have not been executed at least once,
-// the overall availability Status will be "unknown" with HTTP Status code 503 (Service Unavailable).
+// the overall availability AvailabilityStatus will be "unknown" with HTTP AvailabilityStatus code 503 (Service Unavailable).
 func WithPeriodicCheck(refreshPeriod time.Duration, check Check) option {
 	return func(cfg *healthCheckConfig) {
 		check.updateInterval = refreshPeriod

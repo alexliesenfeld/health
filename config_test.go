@@ -1,7 +1,6 @@
 package health
 
 import (
-	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -96,26 +95,13 @@ func TestWithMaxErrorMessageLengthConfig(t *testing.T) {
 	assert.Equal(t, uint(300), cfg.maxErrMsgLen)
 }
 
-func TestWithCustomStatusCodesConfig(t *testing.T) {
-	// Arrange
-	cfg := healthCheckConfig{}
-
-	// Act
-	// Use of non standard Status codes.
-	WithCustomStatusCodes(http.StatusCreated, http.StatusBadGateway)(&cfg)
-
-	// Assert
-	assert.Equal(t, http.StatusCreated, cfg.statusCodeUp)
-	assert.Equal(t, http.StatusBadGateway, cfg.statusCodeDown)
-}
-
 func TestWithStatusChangeListenerConfig(t *testing.T) {
 	// Arrange
 	cfg := healthCheckConfig{}
 
 	// Act
-	// Use of non standard Status codes.
-	WithStatusListener(func(status Status, state map[string]CheckState) {})(&cfg)
+	// Use of non standard AvailabilityStatus codes.
+	WithStatusListener(func(status AvailabilityStatus, state map[string]CheckState) {})(&cfg)
 
 	// Assert
 	assert.NotNil(t, cfg.statusChangeListener)
@@ -128,10 +114,10 @@ func TestNewWithDefaults(t *testing.T) {
 	opt := func(config *healthCheckConfig) { configApplied = true }
 
 	// Act
-	handler := NewHandler(opt)
+	checker := NewChecker(opt)
 
 	// Assert
-	ckr := handler.ckr.(*defaultChecker)
+	ckr := checker.(*defaultChecker)
 	assert.Equal(t, 1*time.Second, ckr.cfg.cacheTTL)
 	assert.Equal(t, 30*time.Second, ckr.cfg.timeout)
 	assert.Equal(t, uint(500), ckr.cfg.maxErrMsgLen)

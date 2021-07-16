@@ -11,7 +11,7 @@ type (
 	Checker interface {
 		Start()
 		Stop()
-		Check(ctx context.Context) AggregatedCheckStatus
+		Check(ctx context.Context) SystemStatus
 	}
 
 	healthCheckConfig struct {
@@ -30,7 +30,7 @@ type (
 		mtx      sync.Mutex
 		cfg      healthCheckConfig
 		state    map[string]CheckState
-		status   Status
+		status   AvailabilityStatus
 		endChans []chan *sync.WaitGroup
 	}
 
@@ -39,8 +39,8 @@ type (
 		newState  CheckState
 	}
 
-	AggregatedCheckStatus struct {
-		Status  Status                  `json:"status"`
+	SystemStatus struct {
+		Status  AvailabilityStatus      `json:"status"`
 		Details *map[string]CheckResult `json:"details,omitempty"`
 	}
 
@@ -49,30 +49,30 @@ type (
 		LastSuccessAt    time.Time
 		LastResult       error
 		ConsecutiveFails uint
-		Status           Status
+		Status           AvailabilityStatus
 		startedAt        time.Time
 	}
 
 	CheckResult struct {
-		Status    Status    `json:"status"`
-		Timestamp time.Time `json:"timestamp,omitempty"`
-		Error     *string   `json:"error,omitempty"`
+		Status    AvailabilityStatus `json:"status"`
+		Timestamp time.Time          `json:"timestamp,omitempty"`
+		Error     *string            `json:"error,omitempty"`
 	}
 
-	SystemStatusListener func(status Status, state map[string]CheckState)
+	SystemStatusListener func(status AvailabilityStatus, state map[string]CheckState)
 
 	CheckStatusListener func(name string, state CheckState)
 
-	Status string
+	AvailabilityStatus string
 )
 
 const (
-	StatusUnknown Status = "unknown"
-	StatusUp      Status = "up"
-	StatusDown    Status = "down"
+	StatusUnknown AvailabilityStatus = "unknown"
+	StatusUp      AvailabilityStatus = "up"
+	StatusDown    AvailabilityStatus = "down"
 )
 
-func (s Status) Criticality() int {
+func (s AvailabilityStatus) Criticality() int {
 	switch s {
 	case StatusDown:
 		return 2
@@ -91,12 +91,7 @@ func newChecker(cfg healthCheckConfig) *defaultChecker {
 			Status:    StatusUnknown,
 		}
 	}
-	ckr := defaultChecker{sync.Mutex{}, cfg, state, StatusUnknown, []chan *sync.WaitGroup{}}
-	if !cfg.withManualStart {
-		ckr.Check(context.Background())
-		ckr.Start()
-	}
-	return &ckr
+	return &defaultChecker{sync.Mutex{}, cfg, state, StatusUnknown, []chan *sync.WaitGroup{}}
 }
 
 func (ck *defaultChecker) Start() {
@@ -142,9 +137,12 @@ func (ck *defaultChecker) Stop() {
 	wg.Wait()
 }
 
-func (ck *defaultChecker) Check(ctx context.Context) AggregatedCheckStatus {
+func (ck *defaultChecker) Check(ctx context.Context) SystemStatus {
 	ck.mtx.Lock()
 	defer ck.mtx.Unlock()
+
+	ctx, cancel := context.WithTimeout(ctx, ck.cfg.timeout)
+	defer cancel()
 
 	var (
 		numChecks          = len(ck.cfg.checks)
@@ -209,8 +207,8 @@ func (ck *defaultChecker) stateToCheckResult() map[string]CheckResult {
 	return results
 }
 
-func newAggregatedCheckStatus(status Status, results map[string]CheckResult, withDetails bool) AggregatedCheckStatus {
-	aggStatus := AggregatedCheckStatus{Status: status}
+func newAggregatedCheckStatus(status AvailabilityStatus, results map[string]CheckResult, withDetails bool) SystemStatus {
+	aggStatus := SystemStatus{Status: status}
 	if withDetails {
 		aggStatus.Details = &results
 	}
@@ -280,7 +278,7 @@ func toErrorDesc(err error, maxLen uint) *string {
 	return nil
 }
 
-func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFails uint) Status {
+func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFails uint) AvailabilityStatus {
 	if state.LastCheckedAt.IsZero() {
 		return StatusUnknown
 	} else if state.LastResult != nil {
@@ -297,7 +295,7 @@ func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFai
 	return StatusUp
 }
 
-func aggregateStatus(results map[string]CheckState) Status {
+func aggregateStatus(results map[string]CheckState) AvailabilityStatus {
 	status := StatusUp
 	for _, result := range results {
 		if result.Status.Criticality() > status.Criticality() {

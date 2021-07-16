@@ -65,7 +65,7 @@ func TestNewAggregatedCheckStatusWithoutDetails(t *testing.T) {
 
 func doTestEvaluateAvailabilityStatus(
 	t *testing.T,
-	expectedStatus Status,
+	expectedStatus AvailabilityStatus,
 	maxTimeInError time.Duration,
 	maxFails uint,
 	state CheckState,
@@ -160,24 +160,6 @@ func TestStartStopManualPeriodicChecks(t *testing.T) {
 	assert.Equal(t, 0, len(ckr.endChans), "no goroutines were stopped on manual stop")
 }
 
-func TestStartAutomaticPeriodicChecks(t *testing.T) {
-	ckr := newChecker(healthCheckConfig{
-		withManualStart: false,
-		checks: map[string]*Check{
-			"check": {
-				Name: "check",
-				Check: func(ctx context.Context) error {
-					return nil
-				},
-				updateInterval: 50 * time.Minute,
-			},
-		}})
-	assert.Equal(t, 1, len(ckr.endChans), "no goroutines were started on manual start")
-
-	ckr.Stop()
-	assert.Equal(t, 0, len(ckr.endChans), "no goroutines were stopped on manual stop")
-}
-
 func TestExecuteCheckFunc(t *testing.T) {
 	// Arrange
 	check := Check{
@@ -266,7 +248,7 @@ func TestInternalCheckWithCheckSuccess(t *testing.T) {
 	assert.Equal(t, uint(0), result.newState.ConsecutiveFails)
 }
 
-func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err error, expectedStatus Status) {
+func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err error, expectedStatus AvailabilityStatus) {
 	// Arrange
 	checks := map[string]*Check{
 		"check1": {
@@ -284,14 +266,14 @@ func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err erro
 		},
 	}
 
-	ckr := newChecker(healthCheckConfig{checks: checks})
+	ckr := newChecker(healthCheckConfig{checks: checks, timeout: 10 * time.Second})
 
 	// Act
 	res := ckr.Check(context.Background())
 
 	// Assert
 	require.NotNil(t, res.Details)
-	assert.Equal(t, res.Status, expectedStatus)
+	assert.Equal(t, expectedStatus, res.Status)
 	for _, ck := range checks {
 		_, checkResultExists := (*res.Details)[ck.Name]
 		assert.True(t, checkResultExists)
@@ -313,7 +295,7 @@ func TestCheckSuccessNotAllChecksExecutedYet(t *testing.T) {
 func TestCheckExecuteListeners(t *testing.T) {
 	// Arrange
 	var (
-		actualStatus      *Status                = nil
+		actualStatus      *AvailabilityStatus    = nil
 		actualResults     *map[string]CheckState = nil
 		expectedErr                              = fmt.Errorf("test error")
 		expectedCheckName                        = "testCheck"
@@ -328,12 +310,17 @@ func TestCheckExecuteListeners(t *testing.T) {
 		},
 	}
 
-	var listener SystemStatusListener = func(status Status, state map[string]CheckState) {
+	var listener SystemStatusListener = func(status AvailabilityStatus, state map[string]CheckState) {
 		actualStatus = &status
 		actualResults = &state
 	}
 
-	ckr := newChecker(healthCheckConfig{checks: checks, statusChangeListener: listener, maxErrMsgLen: 10})
+	ckr := newChecker(healthCheckConfig{
+		checks:               checks,
+		statusChangeListener: listener,
+		maxErrMsgLen:         10,
+		timeout:              10 * time.Second,
+	})
 
 	// Act
 	ckr.Check(context.Background())
