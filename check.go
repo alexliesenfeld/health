@@ -22,6 +22,7 @@ type (
 	}
 
 	defaultChecker struct {
+		started  bool
 		mtx      sync.Mutex
 		cfg      healthCheckConfig
 		state    map[string]CheckState
@@ -157,13 +158,22 @@ func newDefaultChecker(cfg healthCheckConfig) *defaultChecker {
 			Status:    StatusUnknown,
 		}
 	}
-	return &defaultChecker{sync.Mutex{}, cfg, state, StatusUnknown, []chan *sync.WaitGroup{}}
+	return &defaultChecker{false, sync.Mutex{}, cfg, state, StatusUnknown, []chan *sync.WaitGroup{}}
 }
 
 func (ck *defaultChecker) Start() {
 	ck.mtx.Lock()
-	// Run synchronous checks after this method exits (note that deferred function order is reversed!)
-	defer ck.Check(context.Background())
+	ck.started = true
+	defer ck.mtx.Unlock()
+
+	if !ck.started {
+		defer ck.startPeriodicChecks()
+		defer ck.Check(context.Background())
+	}
+}
+
+func (ck *defaultChecker) startPeriodicChecks() {
+	ck.mtx.Lock()
 	defer ck.mtx.Unlock()
 
 	// Start periodic checks
