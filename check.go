@@ -165,11 +165,11 @@ func (ck *defaultChecker) Start() {
 	ck.mtx.Lock()
 
 	if !ck.started {
+		ck.started = true
 		defer ck.startPeriodicChecks()
 		defer ck.Check(context.Background())
 	}
 
-	ck.started = true
 	ck.mtx.Unlock()
 }
 
