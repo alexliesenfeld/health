@@ -163,13 +163,14 @@ func newDefaultChecker(cfg healthCheckConfig) *defaultChecker {
 
 func (ck *defaultChecker) Start() {
 	ck.mtx.Lock()
-	ck.started = true
-	defer ck.mtx.Unlock()
 
 	if !ck.started {
 		defer ck.startPeriodicChecks()
 		defer ck.Check(context.Background())
 	}
+
+	ck.started = true
+	ck.mtx.Unlock()
 }
 
 func (ck *defaultChecker) startPeriodicChecks() {
