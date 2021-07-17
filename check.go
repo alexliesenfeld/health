@@ -215,6 +215,8 @@ func (ck *defaultChecker) Stop() {
 	}
 
 	ck.endChans = []chan *sync.WaitGroup{}
+	ck.started = false
+
 	ck.mtx.Unlock()
 	wg.Wait()
 }
