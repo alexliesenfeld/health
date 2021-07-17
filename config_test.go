@@ -62,17 +62,6 @@ func TestWithDisabledCacheConfig(t *testing.T) {
 	assert.Equal(t, 0*time.Second, cfg.cacheTTL)
 }
 
-func TestWithManualPeriodicCheckStartConfig(t *testing.T) {
-	// Arrange
-	cfg := healthCheckConfig{}
-
-	// Act
-	WithManualStart()(&cfg)
-
-	// Assert
-	assert.True(t, cfg.withManualStart)
-}
-
 func TestWithTimeoutStartConfig(t *testing.T) {
 	// Arrange
 	cfg := healthCheckConfig{}

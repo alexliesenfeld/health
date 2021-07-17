@@ -27,7 +27,13 @@ type (
 		// StatusListener allows to set a listener that will be called
 		// whenever the AvailabilityStatus of the check changes.
 		StatusListener CheckStatusListener // Optional
-		updateInterval time.Duration
+		// BeforeCheckListener is a callback function that will be called
+		// right before a components availability status will be checked.
+		BeforeCheckListener BeforeCheckListener // Optional
+		// AfterCheckListener is a callback function that will be called
+		// right after a components availability status was checked.
+		AfterCheckListener AfterCheckListener // Optional
+		updateInterval     time.Duration
 	}
 
 	option func(*healthCheckConfig)
@@ -86,12 +92,19 @@ func WithStatusListener(listener SystemStatusListener) option {
 	}
 }
 
-// WithManualStart prevents an automatic start of periodic checks (see NewHandler).
-// If this configuration option is used and you want to start periodic checks yourself,
-// you need to start them by using Start.
-func WithManualStart() option {
+// WithBeforeCheckListener registers a handler function that will be called whenever the overall system health
+// AvailabilityStatus changes. Attention: Ideally, this method should be quick and not block for too long.
+func WithBeforeCheckListener(listener BeforeSystemCheckListener) option {
 	return func(cfg *healthCheckConfig) {
-		cfg.withManualStart = true
+		cfg.beforeSystemCheckListener = listener
+	}
+}
+
+// WithAfterCheckListener registers a handler function that will be called whenever the overall system health
+// AvailabilityStatus changes. Attention: Ideally, this method should be quick and not block for too long.
+func WithAfterCheckListener(listener AfterSystemCheckListener) option {
+	return func(cfg *healthCheckConfig) {
+		cfg.afterSystemCheckListener = listener
 	}
 }
 

@@ -140,7 +140,6 @@ func TestToErrorDescNoError(t *testing.T) {
 
 func TestStartStopManualPeriodicChecks(t *testing.T) {
 	ckr := newDefaultChecker(healthCheckConfig{
-		withManualStart: true,
 		checks: map[string]*Check{
 			"check": {
 				Name: "check",
@@ -332,6 +331,6 @@ func TestCheckExecuteListeners(t *testing.T) {
 	assert.Equal(t, StatusDown, (*actualResults)[expectedCheckName].Status)
 }
 
-// TODO: Add test for updateState
-// TODO: Add test for updateCheckState
+// TODO: Add test for checkCurrentState
+// TODO: Add test for checkCurrentState
 // TODO: Add test for mapStateToCheckStatus

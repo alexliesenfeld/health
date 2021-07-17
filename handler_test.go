@@ -36,9 +36,10 @@ func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatu
 	request := httptest.NewRequest("GET", "https://localhost/foo", nil)
 
 	ckr := checkerMock{}
+	ckr.On("Start")
 	ckr.On("Check", mock.Anything).Return(expectedStatus)
 
-	handler := NewHandlerWithStatusCodes(&ckr, statusCodeUp, statusCodeDown)
+	handler := NewHandlerWithConfig(&ckr, HandlerConfig{statusCodeUp, statusCodeDown, false})
 
 	// Act
 	handler.ServeHTTP(response, request)

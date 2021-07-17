@@ -9,15 +9,16 @@ import (
 
 type (
 	healthCheckConfig struct {
-		detailsDisabled      bool
-		timeout              time.Duration
-		statusCodeUp         int
-		statusCodeDown       int
-		checks               map[string]*Check
-		maxErrMsgLen         uint
-		cacheTTL             time.Duration
-		withManualStart      bool
-		statusChangeListener SystemStatusListener
+		detailsDisabled           bool
+		timeout                   time.Duration
+		statusCodeUp              int
+		statusCodeDown            int
+		checks                    map[string]*Check
+		maxErrMsgLen              uint
+		cacheTTL                  time.Duration
+		beforeSystemCheckListener BeforeSystemCheckListener
+		afterSystemCheckListener  AfterSystemCheckListener
+		statusChangeListener      SystemStatusListener
 	}
 
 	defaultChecker struct {
@@ -82,11 +83,43 @@ type (
 
 	// SystemStatusListener is a callback function that will be called
 	// when the system availability status changes (e.g. from "up" to "down").
-	SystemStatusListener func(status AvailabilityStatus, state map[string]CheckState)
+	SystemStatusListener func(ctx context.Context, status AvailabilityStatus, state map[string]CheckState)
+
+	// BeforeSystemCheckListener is a callback function that will be called
+	// right before a the availability status of the system will be checked.
+	// The listener is allowed to add/remove values to the context in
+	// parameter ctx. The new context is expected in the return value
+	// of the function. If you do not want to extend the context, just
+	// return the passed ctx parameter.
+	BeforeSystemCheckListener func(ctx context.Context, state map[string]CheckState) context.Context
+
+	// AfterSystemCheckListener is a callback function that will be called
+	// right after a the availability status of the system was checked.
+	// The listener is allowed to add or remove values to/from the context
+	// in parameter ctx. The new context is expected in the return value of the function.
+	// If you do not want to extend the context, just return the passed ctx
+	// parameter.
+	AfterSystemCheckListener func(ctx context.Context, state map[string]CheckState) context.Context
 
 	// CheckStatusListener is a callback function that will be called
 	// when a components availability status changes (e.g. from "up" to "down").
-	CheckStatusListener func(name string, state CheckState)
+	CheckStatusListener func(ctx context.Context, state CheckState)
+
+	// BeforeCheckListener is a callback function that will be called
+	// right before a components availability status will be checked.
+	// The listener is allowed to add/remove values to the context in
+	// parameter ctx. The new context is expected in the return value
+	// of the function. If you do not want to extend the context, just
+	// return the passed ctx parameter.
+	BeforeCheckListener func(ctx context.Context, state CheckState) context.Context
+
+	// AfterCheckListener is a callback function that will be called
+	// right after a components availability status will be checked.
+	// The listener is allowed to add or remove values to/from the context
+	// in parameter ctx. The new context is expected in the return value of the function.
+	// If you do not want to extend the context, just return the passed ctx
+	// parameter.
+	AfterCheckListener func(ctx context.Context, state CheckState) context.Context
 
 	// AvailabilityStatus expresses the availability of either
 	// a component or the whole system.
@@ -120,7 +153,7 @@ func newDefaultChecker(cfg healthCheckConfig) *defaultChecker {
 	state := map[string]CheckState{}
 	for _, check := range cfg.checks {
 		state[check.Name] = CheckState{
-			startedAt: time.Now(),
+			startedAt: time.Now(), // TODO: Can this be a pointer = nil instead ?
 			Status:    StatusUnknown,
 		}
 	}
@@ -129,20 +162,25 @@ func newDefaultChecker(cfg healthCheckConfig) *defaultChecker {
 
 func (ck *defaultChecker) Start() {
 	ck.mtx.Lock()
+	// Run synchronous checks after this method exits (note that deferred function order is reversed!)
+	defer ck.Check(context.Background())
 	defer ck.mtx.Unlock()
 
+	// Start periodic checks
 	for _, check := range ck.cfg.checks {
 		if isPeriodicCheck(check) {
 			var wg *sync.WaitGroup
 			endChan := make(chan *sync.WaitGroup, 1)
 			ck.endChans = append(ck.endChans, endChan)
-			go func(check Check, currentState CheckState) {
+			go func(check Check, state CheckState) {
 			loop:
 				for {
-					currentState = doCheck(context.Background(), check, currentState).newState
-					ck.mtx.Lock()
-					ck.updateState(checkResult{check.Name, currentState})
-					ck.mtx.Unlock()
+					withCheckContext(context.Background(), &check, func(ctx context.Context) {
+						ctx, state = doCheck(context.Background(), &check, state)
+						ck.mtx.Lock()
+						ck.updateState(ctx, checkResult{check.Name, state})
+						ck.mtx.Unlock()
+					})
 					select {
 					case <-time.After(check.updateInterval):
 					case wg = <-endChan:
@@ -184,12 +222,19 @@ func (ck *defaultChecker) Check(ctx context.Context) SystemStatus {
 		numInitiatedChecks = 0
 	)
 
+	if ck.cfg.beforeSystemCheckListener != nil {
+		ctx = ck.cfg.beforeSystemCheckListener(ctx, ck.state)
+	}
+
 	for _, c := range ck.cfg.checks {
 		state := ck.state[c.Name]
 		if !isPeriodicCheck(c) && isCacheExpired(cacheTTL, &state) {
 			numInitiatedChecks++
 			go func(ctx context.Context, check Check, state CheckState) {
-				resChan <- doCheck(ctx, check, state)
+				withCheckContext(ctx, &check, func(ctx context.Context) {
+					_, state = doCheck(ctx, &check, state)
+					resChan <- checkResult{check.Name, state}
+				})
 			}(ctx, *c, state)
 		}
 	}
@@ -199,35 +244,25 @@ func (ck *defaultChecker) Check(ctx context.Context) SystemStatus {
 		results = append(results, <-resChan)
 	}
 
-	ck.updateState(results...)
+	ck.updateState(ctx, results...)
+
+	if ck.cfg.afterSystemCheckListener != nil {
+		ctx = ck.cfg.afterSystemCheckListener(ctx, ck.state)
+	}
 
 	return newSystemStatus(ck.status, ck.mapStateToCheckStatus(), !ck.cfg.detailsDisabled)
 }
 
-func (ck *defaultChecker) updateState(updates ...checkResult) {
+func (ck *defaultChecker) updateState(ctx context.Context, updates ...checkResult) {
 	for _, update := range updates {
-		ck.updateCheckState(update)
+		ck.state[update.checkName] = update.newState
 	}
 
 	oldStatus := ck.status
 	ck.status = aggregateStatus(ck.state)
 
 	if oldStatus != ck.status && ck.cfg.statusChangeListener != nil {
-		ck.cfg.statusChangeListener(ck.status, ck.state)
-	}
-}
-
-func (ck *defaultChecker) updateCheckState(res checkResult) {
-	var (
-		name      = res.checkName
-		newState  = res.newState
-		oldStatus = ck.state[name].Status
-		listener  = ck.cfg.checks[name].StatusListener
-	)
-
-	ck.state[name] = newState
-	if listener != nil && oldStatus != newState.Status {
-		listener(name, newState)
+		ck.cfg.statusChangeListener(ctx, ck.status, ck.state)
 	}
 }
 
@@ -256,14 +291,35 @@ func isPeriodicCheck(check *Check) bool {
 	return check.updateInterval > 0
 }
 
-func doCheck(ctx context.Context, check Check, state CheckState) checkResult {
+func withCheckContext(ctx context.Context, check *Check, f func(checkCtx context.Context)) {
 	cancel := func() {}
 	if check.Timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, check.Timeout)
 	}
 	defer cancel()
+	f(ctx)
+}
 
-	state.LastResult = executeCheckFunc(ctx, &check)
+func doCheck(ctx context.Context, check *Check, oldState CheckState) (context.Context, CheckState) {
+	if check.BeforeCheckListener != nil {
+		ctx = check.BeforeCheckListener(ctx, oldState)
+	}
+
+	newState := checkCurrentState(ctx, check, oldState)
+
+	if check.AfterCheckListener != nil {
+		ctx = check.AfterCheckListener(ctx, newState)
+	}
+
+	if check.StatusListener != nil && oldState.Status != newState.Status {
+		check.StatusListener(ctx, newState)
+	}
+
+	return ctx, newState
+}
+
+func checkCurrentState(ctx context.Context, check *Check, state CheckState) CheckState {
+	state.LastResult = executeCheckFunc(ctx, check)
 	state.LastCheckedAt = time.Now().UTC()
 
 	if state.LastResult == nil {
@@ -275,7 +331,7 @@ func doCheck(ctx context.Context, check Check, state CheckState) checkResult {
 
 	state.Status = evaluateCheckStatus(&state, check.MaxTimeInError, check.MaxConsecutiveFails)
 
-	return checkResult{check.Name, state}
+	return state
 }
 
 func executeCheckFunc(ctx context.Context, check *Check) error {
