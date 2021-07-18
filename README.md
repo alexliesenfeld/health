@@ -27,8 +27,9 @@
 1. [Getting Started](#getting-started)
 1. [Caching](#caching)
 1. [Periodic Checks](#periodic-checks)
-1. [Failure Tolerant Checks](#failure-tolerant-checks)
+1. [Failure Tolerance](#failure-tolerance)
 1. [Listening to Status Changes](#listening-to-status-changes)
+1. [Listening to Lifecycle Events](#listening-to-lifecycle-events)
 1. [License](#license)
 
 ## Features
@@ -134,7 +135,7 @@ cache. It allows responding to HTTP requests instantly without waiting for the c
 
 Periodic checks can be configured using the `WithPeriodicCheck` configuration option (see example above).
 
-## Failure Tolerant Checks
+## Failure Tolerance
 
 This library lets you configure failure tolerant checks that allow some degree of failure. The check is only considered
 failed, when predefined tolerance thresholds are crossed.
@@ -189,6 +190,19 @@ health.WithStatusListener(func (status health.AvailabilityStatus, state map[stri
     log.Printf("overall system health status changed to %s", status)
 }),
 ```
+
+## Listening to Lifecycle Events
+
+It can be useful to hook into the checking lifecycle to do some pre- and postprocessing. 
+For example, you might want to add tracing (such as 
+[Jaeger traces and spans](https://www.jaegertracing.io/docs/1.24/architecture/#span)), or logging functionality  
+that requires you to perform some actions before and after a check function is executed. This library allows you to 
+do add listeners for both, 
+* a BeforeCheckListener and AfterCheckListener for each individual component, or
+* a AfterSystemCheckListener and AfterSystemCheckListener that are triggered before/after a full system check is 
+  executed.
+
+Please refer to the [documentation](https://pkg.go.dev/github.com/alexliesenfeld/health) for more information.
 
 ## License
 
