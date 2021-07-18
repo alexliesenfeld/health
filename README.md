@@ -39,7 +39,7 @@ necessary components are healthy.
 
 This library provides the following features:
 
-- Request based and fixed-schedule health checks.
+- Request based (synchronous) and fixed-schedule (asynchronous) health checks.
 - Global and check-based timeout management.
 - Caching
 - Lifecycle hooks and status change listeners.
