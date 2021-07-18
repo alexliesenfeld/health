@@ -84,7 +84,7 @@ func TestWhenErrorAndMaxTimeInErrorThresholdNotCrossedThenStatusWarn(t *testing.
 	lastSuccessAt := now.Add(-2 * time.Minute)
 	doTestEvaluateAvailabilityStatus(t, StatusUp, 1*time.Hour, uint(1), CheckState{
 		LastCheckedAt:       &now,
-		LastResult:          fmt.Errorf("example error"), // Required for the test
+		LastResult:          fmt.Errorf("example error"),
 		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
 		LastSuccessAt:       &lastSuccessAt,
 		ConsecutiveFails:    100,
@@ -96,7 +96,7 @@ func TestWhenErrorAndAllThresholdsCrossedThenStatusDown(t *testing.T) {
 	lastSuccessAt := now.Add(-2 * time.Minute)
 	doTestEvaluateAvailabilityStatus(t, StatusDown, 1*time.Second, uint(1), CheckState{
 		LastCheckedAt:       &now,
-		LastResult:          fmt.Errorf("example error"), // Required for the test
+		LastResult:          fmt.Errorf("example error"),
 		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
 		LastSuccessAt:       &lastSuccessAt,
 		ConsecutiveFails:    5,
