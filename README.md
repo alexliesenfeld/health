@@ -42,10 +42,11 @@ This library provides the following features:
 - Request based and fixed-schedule health checks.
 - Global and check-based timeout management.
 - Caching (to avoid sending too many requests to downstream services).
-- Custom HTTP request middleware for pre- and postprocessing HTTP requests and/or responses.
+- Lifecycle hooks and status change listeners.
 - Failure tolerance based on fail count and/or time thresholds.
-- Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) that can be easily used with
-  a [mux](https://golang.org/pkg/net/http/#ServeMux).
+- Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) and 
+  [http.HandlerFunc](https://golang.org/pkg/net/http/#HandlerFunc) that are fully compatible with 
+  [net/http](https://golang.org/pkg/net/http/#ServeMux).
 
 ## Getting Started
 
