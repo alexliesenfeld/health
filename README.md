@@ -212,7 +212,7 @@ This library allows you to add listeners for both,
 
 The execution of check lifecycle hooks is as follows:
 1. [BeforeCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeCheckListener)
-1. for every check:   
+1. For every check:   
     1. [BeforeComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeComponentCheckListener)
     1. Check function of your [Check configuration](https://pkg.go.dev/github.com/alexliesenfeld/health#Check).
     1. [ComponentStatusListener](https://pkg.go.dev/github.com/alexliesenfeld/health#ComponentStatusListener) 
