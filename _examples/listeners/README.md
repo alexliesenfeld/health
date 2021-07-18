@@ -1,3 +1,4 @@
+```go
 package main
 
 import (
@@ -89,3 +90,4 @@ func componentStatusListener(name string) func(ctx context.Context, state health
 		log.Println(fmt.Sprintf("%s: component check status changed to %s in run %d", name, state.Status, ctx.Value(name)))
 	}
 }
+```
