@@ -41,7 +41,7 @@ This library provides the following features:
 
 - Request based and fixed-schedule health checks.
 - Global and check-based timeout management.
-- Caching (to avoid sending too many requests to downstream services).
+- Caching
 - Lifecycle hooks and status change listeners.
 - Failure tolerance based on fail count and/or time thresholds.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) and 
