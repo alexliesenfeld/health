@@ -199,7 +199,7 @@ as [Jaeger traces and spans](https://www.jaegertracing.io/docs/1.24/architecture
 or some logging functionality that requires you to perform some actions before and after a check function 
 is executed. This library allows you to add listeners for both, 
 * a BeforeCheckListener and AfterCheckListener for each individual component, or
-* a AfterSystemCheckListener and AfterSystemCheckListener that are triggered before/after a full system check is 
+* an AfterSystemCheckListener and AfterSystemCheckListener that are triggered before/after a full system check is 
   executed.
 
 Please refer to the [documentation](https://pkg.go.dev/github.com/alexliesenfeld/health) for more information.
