@@ -186,12 +186,12 @@ The example below shows a configuration that adds the following two listeners:
 health.WithPeriodicCheck(5*time.Second, health.Check{
     Name:   "search",
     Check:  myCheckFunc,
-    StatusListener: func (name string, state health.CheckState) {
-        log.Printf("status of component %s changed to %s", name, state.Status)
+    StatusListener: func (ctx context.Context, state health.CheckState) {
+        log.Printf("status of component 'search' changed to %s", name, state.Status)
     },
 }),
 
-health.WithStatusListener(func (status health.AvailabilityStatus, state map[string]health.CheckState) {
+health.WithStatusListener(func (ctx context.Context, status health.AvailabilityStatus, state map[string]health.CheckState) {
     log.Printf("overall system health status changed to %s", status)
 }),
 ```
