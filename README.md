@@ -137,14 +137,14 @@ Periodic checks can be configured using the `WithPeriodicCheck` configuration op
 ## Failure Tolerant Checks
 
 This library lets you configure failure tolerant checks that allow some degree of failure. The check is only considered
-failed, when predefined tolerance thresholds have been crossed.
+failed, when predefined tolerance thresholds are crossed.
 
 ### Example
 
 Let's assume that your app provides a REST API but also consumes messages from a Kafka topic. If the connection to Kafka
 is down, your app can still serve API requests, but it will not process any messages during this time. If the Kafka
-health check is configured without any failure tolerance, and the connection to Kafka is temporarily down, your whole
-application will become unhealthy. This is most likely not what you want. However, if Kafka is down for too long, there
+health check is configured without any failure tolerance, your whole application will become unhealthy. 
+This is most likely not what you want. However, if Kafka is down for too long, there
 may indeed be a problem that requires attention. In this case, you still may want to flag your app unhealthy by
 returning a failing health check, so that it can be automatically restarted by your infrastructure.
 
@@ -155,7 +155,7 @@ health.WithCheck(health.Check{
     Name:    "unreliable-service",
     // Check is allowed to fail up to 4 times until considered unavailable
     MaxConsecutiveFails: 4,
-    // Check is allowed to fail for up to 1 minute until considered unavailable.
+    // Check is allowed to be in an erroneous state for up to 1 minute until considered unavailable.
     MaxTimeInError:      1 * time.Minute,
     Check: myCheckFunc,
 }),
@@ -171,10 +171,9 @@ status, or a component status changes.
 
 ### Example
 
-The example below shows a configuration that adds
+The example below shows a configuration that adds the following two listeners:
 
-- a status listener to a check that will be called whenever the status of the check changes (e.g. from "up" to "down"),
-  and
+- a status listener to a check that will be called whenever the status of the check changes (e.g., from "up" to "down"),
 - an overall system status listener, that will be called whenever the overall system status changes.
 
 ```go
