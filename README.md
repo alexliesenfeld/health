@@ -94,8 +94,8 @@ func main() {
 }
 ```
 
-If our database is down, the request `curl -u username:password http://localhost:3000/health` would yield a response
-with HTTP status code `503 (Service Unavailable)`, and the following JSON response body:
+Because our search component is down, the request `curl -u username:password http://localhost:3000/health` 
+would yield a response with HTTP status code `503 (Service Unavailable)`, and the following JSON response body:
 
 ```json
 {
