@@ -3,6 +3,7 @@ package health
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -26,8 +27,11 @@ func (ck *checkerMock) Stop() {
 }
 
 func (ck *checkerMock) Check(ctx context.Context) SystemStatus {
-	args := ck.Called(ctx)
-	return args.Get(0).(SystemStatus)
+	return ck.Called(ctx).Get(0).(SystemStatus)
+}
+
+func (ck *checkerMock) GetRunningPeriodicCheckCount() int {
+	return ck.Called().Get(0).(int)
 }
 
 func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatus SystemStatus, expectedStatusCode int) {
@@ -51,16 +55,19 @@ func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatu
 
 	result := SystemStatus{}
 	_ = json.Unmarshal(response.Body.Bytes(), &result)
+	log.Printf("returned %+v, want %+v", result.Details, expectedStatus.Details)
+
 	assert.True(t, reflect.DeepEqual(result, expectedStatus))
 }
 
 func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
+	now := time.Now().UTC()
 	err := "hello"
 	status := SystemStatus{
 		Status: StatusUnknown,
 		Details: &map[string]CheckStatus{
-			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: &err},
-			"check2": {Status: StatusUp, Timestamp: time.Now().UTC(), Error: nil},
+			"check1": {Status: StatusDown, Timestamp: &now, Error: &err},
+			"check2": {Status: StatusUp, Timestamp: &now, Error: nil},
 		},
 	}
 
@@ -68,10 +75,11 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 }
 
 func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
+	now := time.Now().UTC()
 	status := SystemStatus{
 		Status: StatusUp,
 		Details: &map[string]CheckStatus{
-			"check1": {Status: StatusUp, Timestamp: time.Now().UTC(), Error: nil},
+			"check1": {Status: StatusUp, Timestamp: &now, Error: nil},
 		},
 	}
 
@@ -79,11 +87,12 @@ func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 }
 
 func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
+	now := time.Now().UTC()
 	err := "an error message"
 	status := SystemStatus{
 		Status: StatusDown,
 		Details: &map[string]CheckStatus{
-			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: &err},
+			"check1": {Status: StatusDown, Timestamp: &now, Error: &err},
 		},
 	}
 	doTestHandler(t, http.StatusNoContent, http.StatusTeapot, status, http.StatusTeapot)

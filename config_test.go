@@ -1,6 +1,7 @@
 package health
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -90,7 +91,7 @@ func TestWithStatusChangeListenerConfig(t *testing.T) {
 
 	// Act
 	// Use of non standard AvailabilityStatus codes.
-	WithStatusListener(func(status AvailabilityStatus, state map[string]CheckState) {})(&cfg)
+	WithStatusListener(func(ctx context.Context, status AvailabilityStatus, state map[string]CheckState) {})(&cfg)
 
 	// Assert
 	assert.NotNil(t, cfg.statusChangeListener)

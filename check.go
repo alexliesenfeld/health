@@ -47,6 +47,9 @@ type (
 		// may contain deadlines to which will be adhered to. The context
 		// will be passed to downstream calls.
 		Check(ctx context.Context) SystemStatus
+		// GetRunningPeriodicCheckCount returns the number of currently
+		// running periodic checks.
+		GetRunningPeriodicCheckCount() int
 	}
 
 	// SystemStatus holds the aggregated system health information.
@@ -62,7 +65,7 @@ type (
 		// Status is the availability status of a component.
 		Status AvailabilityStatus `json:"status"`
 		// Timestamp holds the time when the check happened.
-		Timestamp time.Time `json:"timestamp,omitempty"`
+		Timestamp *time.Time `json:"timestamp,omitempty"`
 		// Error contains the error message, if a check was not successful.
 		Error *string `json:"error,omitempty"`
 	}
@@ -70,16 +73,19 @@ type (
 	// CheckState contains all state attributes of a components check.
 	CheckState struct {
 		// LastCheckedAt holds the time of when the check was last executed.
-		LastCheckedAt time.Time
-		// LastCheckedAt holds the last time of when the check was "up".
-		LastSuccessAt time.Time
+		LastCheckedAt *time.Time
+		// LastCheckedAt holds the last time of when the check did not return an error.
+		LastSuccessAt *time.Time
+		// LastFailureAt holds the last time of when the check did return an error.
+		LastFailureAt *time.Time
+		// FirstCheckStartedAt holds the time of when the first check was started.
+		FirstCheckStartedAt time.Time
 		// LastResult holds the error of the last check (is nil if successful).
 		LastResult error
 		// ConsecutiveFails holds the number of how often the check failed in a row.
 		ConsecutiveFails uint
 		// The current availability status of the check.
-		Status    AvailabilityStatus
-		startedAt time.Time
+		Status AvailabilityStatus
 	}
 
 	// SystemStatusListener is a callback function that will be called
@@ -153,10 +159,7 @@ func (s AvailabilityStatus) criticality() int {
 func newDefaultChecker(cfg healthCheckConfig) *defaultChecker {
 	state := map[string]CheckState{}
 	for _, check := range cfg.checks {
-		state[check.Name] = CheckState{
-			startedAt: time.Now(), // TODO: Can this be a pointer = nil instead ?
-			Status:    StatusUnknown,
-		}
+		state[check.Name] = CheckState{Status: StatusUnknown}
 	}
 	return &defaultChecker{false, sync.Mutex{}, cfg, state, StatusUnknown, []chan *sync.WaitGroup{}}
 }
@@ -288,6 +291,12 @@ func (ck *defaultChecker) mapStateToCheckStatus() map[string]CheckStatus {
 	return results
 }
 
+func (ck *defaultChecker) GetRunningPeriodicCheckCount() int {
+	ck.mtx.Lock()
+	defer ck.mtx.Unlock()
+	return len(ck.endChans)
+}
+
 func newSystemStatus(status AvailabilityStatus, results map[string]CheckStatus, withDetails bool) SystemStatus {
 	aggStatus := SystemStatus{Status: status}
 	if withDetails {
@@ -297,7 +306,7 @@ func newSystemStatus(status AvailabilityStatus, results map[string]CheckStatus, 
 }
 
 func isCacheExpired(cacheDuration time.Duration, state *CheckState) bool {
-	return state.LastCheckedAt.Before(time.Now().Add(-cacheDuration))
+	return state.LastCheckedAt == nil || state.LastCheckedAt.Before(time.Now().Add(-cacheDuration))
 }
 
 func isPeriodicCheck(check *Check) bool {
@@ -314,32 +323,41 @@ func withCheckContext(ctx context.Context, check *Check, f func(checkCtx context
 }
 
 func doCheck(ctx context.Context, check *Check, oldState CheckState) (context.Context, CheckState) {
-	if check.BeforeCheckListener != nil {
-		ctx = check.BeforeCheckListener(ctx, oldState)
+	state := oldState
+
+	if state.FirstCheckStartedAt.IsZero() {
+		state.FirstCheckStartedAt = time.Now().UTC()
 	}
 
-	newState := checkCurrentState(ctx, check, oldState)
+	if check.BeforeCheckListener != nil {
+		ctx = check.BeforeCheckListener(ctx, state)
+	}
 
-	if check.StatusListener != nil && oldState.Status != newState.Status {
-		check.StatusListener(ctx, newState)
+	state = checkCurrentState(ctx, check, state)
+
+	if check.StatusListener != nil && oldState.Status != state.Status {
+		check.StatusListener(ctx, state)
 	}
 
 	if check.AfterCheckListener != nil {
-		ctx = check.AfterCheckListener(ctx, newState)
+		ctx = check.AfterCheckListener(ctx, state)
 	}
 
-	return ctx, newState
+	return ctx, state
 }
 
 func checkCurrentState(ctx context.Context, check *Check, state CheckState) CheckState {
+	now := time.Now().UTC()
+
 	state.LastResult = executeCheckFunc(ctx, check)
-	state.LastCheckedAt = time.Now().UTC()
+	state.LastCheckedAt = &now
 
 	if state.LastResult == nil {
 		state.ConsecutiveFails = 0
-		state.LastSuccessAt = state.LastCheckedAt
+		state.LastSuccessAt = &now
 	} else {
 		state.ConsecutiveFails++
+		state.LastFailureAt = &now
 	}
 
 	state.Status = evaluateCheckStatus(&state, check.MaxTimeInError, check.MaxConsecutiveFails)
@@ -384,8 +402,8 @@ func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFai
 	if state.LastCheckedAt.IsZero() {
 		return StatusUnknown
 	} else if state.LastResult != nil {
-		maxTimeInErrorSinceStartPassed := !state.startedAt.Add(maxTimeInError).After(time.Now())
-		maxTimeInErrorSinceLastSuccessPassed := !state.LastSuccessAt.Add(maxTimeInError).After(time.Now())
+		maxTimeInErrorSinceStartPassed := !state.FirstCheckStartedAt.Add(maxTimeInError).After(time.Now())
+		maxTimeInErrorSinceLastSuccessPassed := state.LastSuccessAt == nil || !state.LastSuccessAt.Add(maxTimeInError).After(time.Now())
 
 		timeInErrorThresholdCrossed := maxTimeInErrorSinceStartPassed && maxTimeInErrorSinceLastSuccessPassed
 		failCountThresholdCrossed := state.ConsecutiveFails >= maxFails
