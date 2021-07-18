@@ -197,7 +197,9 @@ It can be useful to hook into the checking lifecycle to do some pre- and postpro
 For example, you might want to add tracing (such 
 as [Jaeger traces and spans](https://www.jaegertracing.io/docs/1.24/architecture/#span)), 
 or some logging functionality that requires you to perform some actions before and after a check function 
-is executed. This library allows you to add listeners for both, 
+is executed. 
+
+This library allows you to add listeners for both, 
 * a BeforeCheckListener and AfterCheckListener for each individual component, or
 * a BeforeSystemCheckListener and AfterSystemCheckListener that are triggered before/after a full system check is 
   executed.
