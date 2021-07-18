@@ -1,3 +1,4 @@
+This example shows how to get started with this library.
 ```go
 package main
 

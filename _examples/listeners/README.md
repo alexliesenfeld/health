@@ -1,3 +1,4 @@
+This example shows how listeners can be used to hook into checking lifecycle.
 ```go
 package main
 
