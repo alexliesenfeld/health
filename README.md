@@ -194,12 +194,12 @@ health.WithStatusListener(func (status health.AvailabilityStatus, state map[stri
 
 ## Listening to Lifecycle Events
 
-It can be useful to hook into the checking lifecycle to do some pre- and postprocessing. 
-For example, you might want to add some tracing (e.g., a 
-[Jaeger span](https://www.jaegertracing.io/docs/1.24/architecture/#span)), or additional logging functionality that 
-requires you to perform some actions before and after a check function is executed. 
+It can be useful to hook into the checking lifecycle to do some processing before and after a check function is 
+executed. For example, you might want to add some tracing information (such as a 
+[Jaeger span](https://www.jaegertracing.io/docs/1.24/architecture/#span)) to the 
+[context.Context](https://pkg.go.dev/context#Context), or do some additional logging. 
 
-This library allows you to add listeners for both, 
+This library allows you to define the following listener types: 
 * a [BeforeComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeComponentCheckListener) 
   and [AfterComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#AfterComponentCheckListener) 
   for each individual component, and
@@ -209,7 +209,7 @@ This library allows you to add listeners for both,
 
 ### Lifecycle hook execution order 
 
-The execution of check lifecycle hooks is as follows:
+The execution order of check lifecycle functions is as follows:
 1. [BeforeCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeCheckListener)
 1. For every check:   
     1. [BeforeComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeComponentCheckListener)
