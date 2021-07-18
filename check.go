@@ -187,7 +187,7 @@ func (ck *defaultChecker) startPeriodicChecks() {
 			loop:
 				for {
 					withCheckContext(context.Background(), &check, func(ctx context.Context) {
-						ctx, state = doCheck(context.Background(), &check, state)
+						ctx, state = doCheck(ctx, &check, state)
 						ck.mtx.Lock()
 						ck.updateState(ctx, checkResult{check.Name, state})
 						ck.mtx.Unlock()
@@ -320,12 +320,12 @@ func doCheck(ctx context.Context, check *Check, oldState CheckState) (context.Co
 
 	newState := checkCurrentState(ctx, check, oldState)
 
-	if check.AfterCheckListener != nil {
-		ctx = check.AfterCheckListener(ctx, newState)
-	}
-
 	if check.StatusListener != nil && oldState.Status != newState.Status {
 		check.StatusListener(ctx, newState)
+	}
+
+	if check.AfterCheckListener != nil {
+		ctx = check.AfterCheckListener(ctx, newState)
 	}
 
 	return ctx, newState
