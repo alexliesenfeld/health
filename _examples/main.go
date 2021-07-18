@@ -29,7 +29,7 @@ func main() {
 		}),
 
 		// The following check will be executed periodically every 30 seconds.
-		health.WithPeriodicCheck(5*time.Second, health.Check{
+		health.WithPeriodicCheck(15*time.Second, health.Check{
 			Name:                "search",
 			BeforeCheckListener: beforeCheckListener("search"),
 			AfterCheckListener:  afterCheckListener("search"),
