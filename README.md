@@ -200,7 +200,7 @@ or some logging functionality that requires you to perform some actions before a
 is executed. 
 
 This library allows you to add listeners for both, 
-* a BeforeCheckListener and AfterCheckListener for each individual component, or
+* a BeforeCheckListener and AfterCheckListener for each individual component, and
 * a BeforeSystemCheckListener and AfterSystemCheckListener that are triggered before/after a full system check is 
   executed.
 
