@@ -16,9 +16,9 @@ type (
 		checks                    map[string]*Check
 		maxErrMsgLen              uint
 		cacheTTL                  time.Duration
-		beforeSystemCheckListener BeforeSystemCheckListener
-		afterSystemCheckListener  AfterSystemCheckListener
-		statusChangeListener      SystemStatusListener
+		beforeSystemCheckListener BeforeCheckListener
+		afterSystemCheckListener  AfterCheckListener
+		statusChangeListener      StatusListener
 	}
 
 	defaultChecker struct {
@@ -35,15 +35,14 @@ type (
 		newState  CheckState
 	}
 
-	// Checker is the main checker interface and it encapsulates all
-	// health checking logic.
+	// Checker is the main checker interface. It provides all health checking logic.
 	Checker interface {
-		// Start will start all periodic checks and prepares the
-		// checker for accepting health check requests.
+		// Start will start all necessary background workers and prepare
+		// the checker for further usage.
 		Start()
-		// Stop stops will stop the checker (i.e. all periodic checks).
+		// Stop stops will stop the checker.
 		Stop()
-		// Check performs a health check. I expects a context, that
+		// Check performs a health check. It expects a context, that
 		// may contain deadlines to which will be adhered to. The context
 		// will be passed to downstream calls.
 		Check(ctx context.Context) SystemStatus
@@ -52,25 +51,26 @@ type (
 		GetRunningPeriodicCheckCount() int
 	}
 
-	// SystemStatus holds the aggregated system health information.
+	// SystemStatus holds the aggregated system availability status and
+	// detailed information about the individual checks.
 	SystemStatus struct {
-		// Status is the aggregated availability status of the system.
+		// Status is the aggregated system availability status.
 		Status AvailabilityStatus `json:"status"`
-		// Details contains health information about all checked components.
+		// Details contains health information for all checked components.
 		Details *map[string]CheckStatus `json:"details,omitempty"`
 	}
 
-	// CheckStatus holds the a components health information.
+	// CheckStatus holds a components health information.
 	CheckStatus struct {
 		// Status is the availability status of a component.
 		Status AvailabilityStatus `json:"status"`
-		// Timestamp holds the time when the check happened.
+		// Timestamp holds the time when the check was executed.
 		Timestamp *time.Time `json:"timestamp,omitempty"`
-		// Error contains the error message, if a check was not successful.
+		// Error contains the check error message, if the check failed.
 		Error *string `json:"error,omitempty"`
 	}
 
-	// CheckState contains all state attributes of a components check.
+	// CheckState represents the current state of a component check.
 	CheckState struct {
 		// LastCheckedAt holds the time of when the check was last executed.
 		LastCheckedAt *time.Time
@@ -80,7 +80,7 @@ type (
 		LastFailureAt *time.Time
 		// FirstCheckStartedAt holds the time of when the first check was started.
 		FirstCheckStartedAt time.Time
-		// LastResult holds the error of the last check (is nil if successful).
+		// LastResult holds the error of the last check (nil if successful).
 		LastResult error
 		// ConsecutiveFails holds the number of how often the check failed in a row.
 		ConsecutiveFails uint
@@ -88,45 +88,51 @@ type (
 		Status AvailabilityStatus
 	}
 
-	// SystemStatusListener is a callback function that will be called
+	// StatusListener is a callback function that will be called
 	// when the system availability status changes (e.g. from "up" to "down").
-	SystemStatusListener func(ctx context.Context, status AvailabilityStatus, state map[string]CheckState)
+	StatusListener func(ctx context.Context, status AvailabilityStatus, state map[string]CheckState)
 
-	// BeforeSystemCheckListener is a callback function that will be called
+	// BeforeCheckListener is a callback function that will be called
 	// right before a the availability status of the system will be checked.
 	// The listener is allowed to add/remove values to the context in
 	// parameter ctx. The new context is expected in the return value
 	// of the function. If you do not want to extend the context, just
 	// return the passed ctx parameter.
-	BeforeSystemCheckListener func(ctx context.Context, state map[string]CheckState) context.Context
+	// Attention: This listener will only be invoked when the Checker.Check
+	// function is executed (i.e., for every HTTP request). It will not
+	// be invoked before a periodic check function is executed!
+	BeforeCheckListener func(ctx context.Context, state map[string]CheckState) context.Context
 
-	// AfterSystemCheckListener is a callback function that will be called
+	// AfterCheckListener is a callback function that will be called
 	// right after a the availability status of the system was checked.
 	// The listener is allowed to add or remove values to/from the context
 	// in parameter ctx. The new context is expected in the return value of the function.
 	// If you do not want to extend the context, just return the passed ctx
 	// parameter.
-	AfterSystemCheckListener func(ctx context.Context, state map[string]CheckState) context.Context
+	// Attention: This listener will only be invoked when the Checker.Check
+	// function is executed (i.e., for every HTTP request). It will not
+	// be invoked before a periodic check function is executed!
+	AfterCheckListener func(ctx context.Context, state map[string]CheckState) context.Context
 
-	// CheckStatusListener is a callback function that will be called
+	// ComponentStatusListener is a callback function that will be called
 	// when a components availability status changes (e.g. from "up" to "down").
-	CheckStatusListener func(ctx context.Context, state CheckState)
+	ComponentStatusListener func(ctx context.Context, state CheckState)
 
-	// BeforeCheckListener is a callback function that will be called
+	// BeforeComponentCheckListener is a callback function that will be called
 	// right before a components availability status will be checked.
 	// The listener is allowed to add/remove values to the context in
 	// parameter ctx. The new context is expected in the return value
 	// of the function. If you do not want to extend the context, just
 	// return the passed ctx parameter.
-	BeforeCheckListener func(ctx context.Context, state CheckState) context.Context
+	BeforeComponentCheckListener func(ctx context.Context, state CheckState) context.Context
 
-	// AfterCheckListener is a callback function that will be called
+	// AfterComponentCheckListener is a callback function that will be called
 	// right after a components availability status will be checked.
 	// The listener is allowed to add or remove values to/from the context
 	// in parameter ctx. The new context is expected in the return value of the function.
 	// If you do not want to extend the context, just return the passed ctx
 	// parameter.
-	AfterCheckListener func(ctx context.Context, state CheckState) context.Context
+	AfterComponentCheckListener func(ctx context.Context, state CheckState) context.Context
 
 	// AvailabilityStatus expresses the availability of either
 	// a component or the whole system.
@@ -135,13 +141,13 @@ type (
 
 const (
 	// StatusUnknown holds the information that the availability
-	// status is not known yet, because no check was yet.
+	// status is not known, because not all checks were executed yet.
 	StatusUnknown AvailabilityStatus = "unknown"
-	// StatusUp holds the information that the system or component
-	// is available.
+	// StatusUp holds the information that the system or a component
+	// is up and running.
 	StatusUp AvailabilityStatus = "up"
-	// StatusDown holds the information that the system or component
-	// is not available.
+	// StatusDown holds the information that the system or a component
+	// down and not available.
 	StatusDown AvailabilityStatus = "down"
 )
 

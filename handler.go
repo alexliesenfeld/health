@@ -11,30 +11,28 @@ type HandlerConfig struct {
 	DisableCheckerAutostart bool
 }
 
-// NewHandler creates a new health check http.Handler. If periodic checks have
-// been configured (see WithPeriodicCheck), they will be started as well
-// (if not explicitly turned off using WithManualStart).
+// NewHandler creates a new health check http.Handler.
+// The Checker will be started automatically (see Checker.Start).
 func NewHandler(checker Checker) http.Handler {
 	return NewHandlerFunc(checker)
 }
 
-// NewHandlerWithConfig creates a new health check http.Handler. If periodic checks have
-// been configured (see WithPeriodicCheck), they will be started as well
-// (if not explicitly turned off using WithManualStart).
+// NewHandlerWithConfig creates a new health check http.Handler.
+// If HandlerConfig.DisableCheckerAutostart is not true,
+// the Checker will be started automatically (see Checker.Start).
 func NewHandlerWithConfig(checker Checker, cfg HandlerConfig) http.Handler {
 	return NewHandlerFuncWithConfig(checker, cfg)
 }
 
-// NewHandlerFunc creates a new health check http.Handler. If periodic checks have
-// been configured (see WithPeriodicCheck), they will be started as well
-// (if not explicitly turned off using WithManualStart).
+// NewHandlerFunc creates a new health check http.Handler.
+// The Checker will be started automatically (see Checker.Start).
 func NewHandlerFunc(checker Checker) http.HandlerFunc {
 	return NewHandlerFuncWithConfig(checker, HandlerConfig{http.StatusOK, http.StatusServiceUnavailable, false})
 }
 
-// NewHandlerFuncWithConfig creates a new health check http.Handler. If periodic checks have
-// been configured (see WithPeriodicCheck), they will be started as well
-// (if not explicitly turned off using WithManualStart).
+// NewHandlerFuncWithConfig creates a new health check http.Handler.
+// If HandlerConfig.DisableCheckerAutostart is not true,
+// the Checker will be started automatically (see Checker.Start).
 func NewHandlerFuncWithConfig(checker Checker, cfg HandlerConfig) http.HandlerFunc {
 	if !cfg.DisableCheckerAutostart {
 		checker.Start()
