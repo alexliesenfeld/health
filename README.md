@@ -201,9 +201,24 @@ or some logging functionality that requires you to perform some actions before a
 is executed. 
 
 This library allows you to add listeners for both, 
-* a BeforeCheckListener and AfterCheckListener for each individual component, and
-* a BeforeSystemCheckListener and AfterSystemCheckListener that are triggered before/after a full system check is 
-  executed.
+* a [BeforeComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeComponentCheckListener) 
+  and [AfterComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#AfterComponentCheckListener) 
+  for each individual component, and
+* a [BeforeCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeCheckListener) and 
+  [AfterCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#AfterCheckListener) that are triggered 
+  before/after a full system check is executed.
+
+### Lifecycle hook execution order 
+
+The execution of check lifecycle hooks is as follows:
+1. [BeforeCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeCheckListener)
+1. for every check:   
+    1. [BeforeComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeComponentCheckListener)
+    1. Check function of your [Check configuration](https://pkg.go.dev/github.com/alexliesenfeld/health#Check).
+    1. [ComponentStatusListener](https://pkg.go.dev/github.com/alexliesenfeld/health#ComponentStatusListener) 
+    1. [AfterComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#AfterComponentCheckListener)
+1. [StatusListener](https://pkg.go.dev/github.com/alexliesenfeld/health#StatusListener)
+1. [AfterCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#AfterCheckListener)
 
 Please refer to the [documentation](https://pkg.go.dev/github.com/alexliesenfeld/health) for more information.
 
