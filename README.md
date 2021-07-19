@@ -1,5 +1,6 @@
 <div align="center">
-<h1>Health</h1>
+    <img src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-balloon.svg" alt="" width="100px"/>
+    <h1>Health</h1>
 </div>
 
 <p align="center">A simple and flexible health check library for Go.</p>
@@ -160,7 +161,7 @@ Failure tolerant health checks let you configure this kind of behaviour.
 health.WithCheck(health.Check{
     Name:    "unreliable-service",
     // Check is allowed to fail up to 4 times until considered unavailable
-    MaxConsecutiveFails: 4,
+    MaxContiguousFails: 4,
     // Check is allowed to be in an erroneous state for up to 1 minute until considered unavailable.
     MaxTimeInError:      1 * time.Minute,
     Check: myCheckFunc,
