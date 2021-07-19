@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-balloon.svg" alt="" width="100px"/>*
+    <img src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-hug.svg" alt="" width="100px"/>*
     <h1>Health</h1>
 </div>
 
