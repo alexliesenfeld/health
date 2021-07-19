@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-balloon.svg" alt="" width="100px"/>
+    <img src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-balloon.svg" alt="" width="100px"/>*
     <h1>Health</h1>
 </div>
 
@@ -234,3 +234,9 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Public License for more details.
 
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B26405%2Fgithub.com%2Falexliesenfeld%2Fhealth.svg?type=large)](https://app.fossa.com/projects/custom%2B26405%2Fgithub.com%2Falexliesenfeld%2Fhealth?ref=badge_large)
+
+## Attribution
+
+(*) The image included at the top of this document was created by [Egon Elbre](https://github.com/egonelbre/gophers) 
+and is licensed under the [CC0 license](https://creativecommons.org/publicdomain/zero/1.0/). For more information, 
+please head over to its [source repository](https://github.com/egonelbre/gophers).
