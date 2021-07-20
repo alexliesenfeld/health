@@ -83,7 +83,7 @@ func onComponentStatusChanged(ctx context.Context, state health.CheckState) cont
 
 func afterComponentCheck(ctx context.Context, state health.CheckState) {
 	if state.LastResult != nil {
-		getLogger(ctx).Warnf("ended component check with error: %v", state.LastResult.Error())
+		getLogger(ctx).Warnf("ended component check with error: %v", state.LastResult)
 	} else {
 		getLogger(ctx).Info("ended component check with success")
 	}
