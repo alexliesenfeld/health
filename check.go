@@ -82,8 +82,8 @@ type (
 		FirstCheckStartedAt time.Time
 		// LastResult holds the error of the last check (nil if successful).
 		LastResult error
-		// ConsecutiveFails holds the number of how often the check failed in a row.
-		ConsecutiveFails uint
+		// ContiguousFails holds the number of how often the check failed in a row.
+		ContiguousFails uint
 		// The current availability status of the check.
 		Status AvailabilityStatus
 	}
@@ -114,25 +114,25 @@ type (
 	// be invoked before a periodic check function is executed!
 	AfterCheckListener func(ctx context.Context, state map[string]CheckState) context.Context
 
-	// ComponentStatusListener is a callback function that will be called
+	// ComponentStatusListenerFunc is a callback function that will be called
 	// when a components availability status changes (e.g. from "up" to "down").
-	ComponentStatusListener func(ctx context.Context, state CheckState)
+	ComponentStatusListenerFunc func(ctx context.Context, state CheckState)
 
-	// BeforeComponentCheckListener is a callback function that will be called
+	// BeforeComponentCheckListenerFunc is a callback function that will be called
 	// right before a components availability status will be checked.
 	// The listener is allowed to add/remove values to the context in
 	// parameter ctx. The new context is expected in the return value
 	// of the function. If you do not want to extend the context, just
 	// return the passed ctx parameter.
-	BeforeComponentCheckListener func(ctx context.Context, state CheckState) context.Context
+	BeforeComponentCheckListenerFunc func(ctx context.Context, name string, state CheckState) context.Context
 
-	// AfterComponentCheckListener is a callback function that will be called
+	// AfterComponentCheckListenerFunc is a callback function that will be called
 	// right after a components availability status will be checked.
 	// The listener is allowed to add or remove values to/from the context
 	// in parameter ctx. The new context is expected in the return value of the function.
 	// If you do not want to extend the context, just return the passed ctx
 	// parameter.
-	AfterComponentCheckListener func(ctx context.Context, state CheckState) context.Context
+	AfterComponentCheckListenerFunc func(ctx context.Context, state CheckState) context.Context
 
 	// AvailabilityStatus expresses the availability of either
 	// a component or the whole system.
@@ -336,13 +336,13 @@ func doCheck(ctx context.Context, check *Check, oldState CheckState) (context.Co
 	}
 
 	if check.BeforeCheckListener != nil {
-		ctx = check.BeforeCheckListener(ctx, state)
+		ctx = check.BeforeCheckListener(ctx, check.Name, state)
 	}
 
 	state = checkCurrentState(ctx, check, state)
 
-	if check.StatusListener != nil && oldState.Status != state.Status {
-		check.StatusListener(ctx, state)
+	if check.StatusChangeListener != nil && oldState.Status != state.Status {
+		check.StatusChangeListener(ctx, state)
 	}
 
 	if check.AfterCheckListener != nil {
@@ -359,14 +359,14 @@ func checkCurrentState(ctx context.Context, check *Check, state CheckState) Chec
 	state.LastCheckedAt = &now
 
 	if state.LastResult == nil {
-		state.ConsecutiveFails = 0
+		state.ContiguousFails = 0
 		state.LastSuccessAt = &now
 	} else {
-		state.ConsecutiveFails++
+		state.ContiguousFails++
 		state.LastFailureAt = &now
 	}
 
-	state.Status = evaluateCheckStatus(&state, check.MaxTimeInError, check.MaxConsecutiveFails)
+	state.Status = evaluateCheckStatus(&state, check.MaxTimeInError, check.MaxContiguousFails)
 
 	return state
 }
@@ -412,7 +412,7 @@ func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFai
 		maxTimeInErrorSinceLastSuccessPassed := state.LastSuccessAt == nil || !state.LastSuccessAt.Add(maxTimeInError).After(time.Now())
 
 		timeInErrorThresholdCrossed := maxTimeInErrorSinceStartPassed && maxTimeInErrorSinceLastSuccessPassed
-		failCountThresholdCrossed := state.ConsecutiveFails >= maxFails
+		failCountThresholdCrossed := state.ContiguousFails >= maxFails
 
 		if failCountThresholdCrossed && timeInErrorThresholdCrossed {
 			return StatusDown

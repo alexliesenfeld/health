@@ -75,7 +75,7 @@ func TestWhenErrorAndMaxFailuresThresholdNotCrossedThenStatusWarn(t *testing.T) 
 		LastResult:          fmt.Errorf("example error"),
 		FirstCheckStartedAt: now.Add(-2 * time.Minute),
 		LastSuccessAt:       &lastSuccessAt,
-		ConsecutiveFails:    1,
+		ContiguousFails:     1,
 	})
 }
 
@@ -87,7 +87,7 @@ func TestWhenErrorAndMaxTimeInErrorThresholdNotCrossedThenStatusWarn(t *testing.
 		LastResult:          fmt.Errorf("example error"),
 		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
 		LastSuccessAt:       &lastSuccessAt,
-		ConsecutiveFails:    100,
+		ContiguousFails:     100,
 	})
 }
 
@@ -99,7 +99,7 @@ func TestWhenErrorAndAllThresholdsCrossedThenStatusDown(t *testing.T) {
 		LastResult:          fmt.Errorf("example error"),
 		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
 		LastSuccessAt:       &lastSuccessAt,
-		ConsecutiveFails:    5,
+		ContiguousFails:     5,
 	})
 }
 
@@ -204,7 +204,7 @@ func TestCheckExecuteListeners(t *testing.T) {
 		},
 	}
 
-	var listener StatusListener = func(status AvailabilityStatus, state map[string]CheckState) {
+	var listener StatusChangeListener = func(status AvailabilityStatus, state map[string]CheckState) {
 		actualStatus = &status
 		actualResults = &state
 	}
@@ -238,7 +238,7 @@ func TestInternalCheckWithCheckSuccess(t *testing.T) {
 		FirstCheckedAt:   time.Now().Add(-5 * time.Minute),
 		LastCheckedAt:    time.Now().Add(-5 * time.Minute),
 		LastSuccessAt:    time.Now().Add(-5 * time.Minute),
-		ConsecutiveFails: 1000,
+		ContiguousFails: 1000,
 	}
 
 	// Act
@@ -249,7 +249,7 @@ func TestInternalCheckWithCheckSuccess(t *testing.T) {
 	assert.Equal(t, true, result.newState.LastCheckedAt.Equal(result.newState.LastCheckedAt))
 	assert.Equal(t, true, state.FirstCheckedAt.Equal(result.newState.startedAt))
 	assert.Equal(t, "UTC", result.newState.LastCheckedAt.Format("MST"))
-	assert.Equal(t, uint(0), result.newState.ConsecutiveFails)
+	assert.Equal(t, uint(0), result.newState.ContiguousFails)
 }
 
 
@@ -274,7 +274,7 @@ func TestInternalCheckWithCheckError(t *testing.T) {
 	assert.Equal(t, true, state.LastSuccessAt.Equal(result.newState.LastSuccessAt))
 	assert.Equal(t, true, state.FirstCheckedAt.Equal(result.newState.startedAt))
 	assert.Equal(t, "UTC", result.newState.LastCheckedAt.Format("MST"))
-	assert.Equal(t, uint(1), result.newState.ConsecutiveFails)
+	assert.Equal(t, uint(1), result.newState.ContiguousFails)
 }
 
 

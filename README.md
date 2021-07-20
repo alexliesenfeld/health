@@ -77,7 +77,7 @@ func main() {
 		// A simple check to see if database connection is up.
 		health.WithCheck(health.Check{
 			Name:    "database",
-			Timeout: 2 * time.Second, // A a check specific timeout.
+			Timeout: 2 * time.Second, // A check specific timeout.
 			Check:   db.PingContext,
 		}),
 

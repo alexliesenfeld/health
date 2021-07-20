@@ -21,18 +21,18 @@ type (
 		// MaxTimeInError will set a duration for how long a service must be
 		// in an error state until it is considered down/unavailable.
 		MaxTimeInError time.Duration // Optional
-		// MaxConsecutiveFails will set a maximum number of consecutive
+		// MaxContiguousFails will set a maximum number of contiguous
 		// check fails until the service is considered down/unavailable.
-		MaxConsecutiveFails uint // Optional
-		// StatusListener allows to set a listener that will be called
+		MaxContiguousFails uint // Optional
+		// StatusChangeListener allows to set a listener that will be called
 		// whenever the AvailabilityStatus of the check changes.
-		StatusListener ComponentStatusListener // Optional
+		StatusChangeListener ComponentStatusListenerFunc // Optional
 		// BeforeCheckListener is a callback function that will be called
 		// right before a components availability status will be checked.
-		BeforeCheckListener BeforeComponentCheckListener // Optional
+		BeforeCheckListener BeforeComponentCheckListenerFunc // Optional
 		// AfterCheckListener is a callback function that will be called
 		// right after a components availability status was checked.
-		AfterCheckListener AfterComponentCheckListener // Optional
+		AfterCheckListener AfterComponentCheckListenerFunc // Optional
 		updateInterval     time.Duration
 	}
 
