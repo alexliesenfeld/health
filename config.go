@@ -91,16 +91,20 @@ func WithStatusListener(listener StatusListener) option {
 	}
 }
 
-// WithBeforeCheckListener registers a handler function that will be called whenever the overall system health
-// AvailabilityStatus changes.
+// WithBeforeCheckListener is triggered before Checker.Check is executed.
+// Attention: It will not be executed for periodic checks! It is usually
+// executed as a part of processing of HTTP requests received on the
+// health endpoint.
 func WithBeforeCheckListener(listener BeforeCheckListener) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.beforeSystemCheckListener = listener
 	}
 }
 
-// WithAfterCheckListener registers a handler function that will be called whenever the overall system health
-// AvailabilityStatus changes.
+// WithAfterCheckListener is triggered after Checker.Check is executed.
+// Attention: It will not be executed for periodic checks! It is usually
+// executed as a part of processing of HTTP requests received on the
+// health endpoint.
 func WithAfterCheckListener(listener AfterCheckListener) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.afterSystemCheckListener = listener

@@ -116,7 +116,7 @@ type (
 
 	// ComponentStatusListener is a callback function that will be called
 	// when a components availability status changes (e.g. from "up" to "down").
-	ComponentStatusListener func(ctx context.Context, state CheckState)
+	ComponentStatusListener func(ctx context.Context, state CheckState) context.Context
 
 	// BeforeComponentCheckListener is a callback function that will be called
 	// right before a components availability status will be checked.
@@ -132,7 +132,7 @@ type (
 	// in parameter ctx. The new context is expected in the return value of the function.
 	// If you do not want to extend the context, just return the passed ctx
 	// parameter.
-	AfterComponentCheckListener func(ctx context.Context, state CheckState) context.Context
+	AfterComponentCheckListener func(ctx context.Context, state CheckState)
 
 	// AvailabilityStatus expresses the availability of either
 	// a component or the whole system.
@@ -342,11 +342,11 @@ func doCheck(ctx context.Context, check *Check, oldState CheckState) (context.Co
 	state = checkCurrentState(ctx, check, state)
 
 	if check.StatusChangeListener != nil && oldState.Status != state.Status {
-		check.StatusChangeListener(ctx, state)
+		ctx = check.StatusChangeListener(ctx, state)
 	}
 
 	if check.AfterCheckListener != nil {
-		ctx = check.AfterCheckListener(ctx, state)
+		check.AfterCheckListener(ctx, state)
 	}
 
 	return ctx, state
