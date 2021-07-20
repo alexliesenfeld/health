@@ -24,9 +24,9 @@ type (
 		// MaxContiguousFails will set a maximum number of contiguous
 		// check fails until the service is considered down/unavailable.
 		MaxContiguousFails uint // Optional
-		// StatusChangeListener allows to set a listener that will be called
+		// StatusListener allows to set a listener that will be called
 		// whenever the AvailabilityStatus of the check changes.
-		StatusChangeListener ComponentStatusListener // Optional
+		StatusListener ComponentStatusListener // Optional
 		// BeforeCheckListener is a callback function that will be called
 		// right before a components availability status will be checked.
 		BeforeCheckListener BeforeComponentCheckListener // Optional

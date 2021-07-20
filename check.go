@@ -341,8 +341,8 @@ func doCheck(ctx context.Context, check *Check, oldState CheckState) (context.Co
 
 	state = checkCurrentState(ctx, check, state)
 
-	if check.StatusChangeListener != nil && oldState.Status != state.Status {
-		ctx = check.StatusChangeListener(ctx, state)
+	if check.StatusListener != nil && oldState.Status != state.Status {
+		ctx = check.StatusListener(ctx, state)
 	}
 
 	if check.AfterCheckListener != nil {

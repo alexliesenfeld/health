@@ -19,11 +19,11 @@ func main() {
 
 		// A simple successFunc to see if a fake database connection is up.
 		health.WithCheck(health.Check{
-			Name:                 "database",
-			Timeout:              2 * time.Second, // A successFunc specific timeout.
-			BeforeCheckListener:  beforeComponentCheck,
-			AfterCheckListener:   afterComponentCheck,
-			StatusChangeListener: onComponentStatusChanged,
+			Name:                "database",
+			Timeout:             2 * time.Second, // A successFunc specific timeout.
+			BeforeCheckListener: beforeComponentCheck,
+			AfterCheckListener:  afterComponentCheck,
+			StatusListener:      onComponentStatusChanged,
 			Check: func(ctx context.Context) error {
 				return nil // no error
 			},
@@ -31,11 +31,11 @@ func main() {
 
 		// A simple successFunc to see if a fake file system up.
 		health.WithCheck(health.Check{
-			Name:                 "filesystem",
-			Timeout:              2 * time.Second, // A successFunc specific timeout.
-			BeforeCheckListener:  beforeComponentCheck,
-			AfterCheckListener:   afterComponentCheck,
-			StatusChangeListener: onComponentStatusChanged,
+			Name:                "filesystem",
+			Timeout:             2 * time.Second, // A successFunc specific timeout.
+			BeforeCheckListener: beforeComponentCheck,
+			AfterCheckListener:  afterComponentCheck,
+			StatusListener:      onComponentStatusChanged,
 			Check: func(ctx context.Context) error {
 				return fmt.Errorf("this is a check error") // example error
 			},
@@ -43,10 +43,10 @@ func main() {
 
 		// The following check will be executed periodically every 30 seconds.
 		health.WithPeriodicCheck(15*time.Second, health.Check{
-			Name:                 "search-engine",
-			BeforeCheckListener:  beforeComponentCheck,
-			AfterCheckListener:   afterComponentCheck,
-			StatusChangeListener: onComponentStatusChanged,
+			Name:                "search-engine",
+			BeforeCheckListener: beforeComponentCheck,
+			AfterCheckListener:  afterComponentCheck,
+			StatusListener:      onComponentStatusChanged,
 			Check: func(ctx context.Context) error {
 				return nil // no error
 			},
@@ -80,6 +80,7 @@ func onComponentStatusChanged(ctx context.Context, state health.CheckState) cont
 	getLogger(ctx).Infof("component changed status to %s", state.Status)
 	return ctx
 }
+
 func afterComponentCheck(ctx context.Context, state health.CheckState) {
 	if state.LastResult != nil {
 		getLogger(ctx).Warnf("ended component check with error: %v", state.LastResult.Error())

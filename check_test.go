@@ -204,7 +204,7 @@ func TestCheckExecuteListeners(t *testing.T) {
 		},
 	}
 
-	var listener StatusChangeListener = func(status AvailabilityStatus, state map[string]CheckState) {
+	var listener StatusListener = func(status AvailabilityStatus, state map[string]CheckState) {
 		actualStatus = &status
 		actualResults = &state
 	}
