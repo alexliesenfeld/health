@@ -55,8 +55,8 @@ func main() {
 		// This listener will be called whenever system health status changes (e.g., from "up" to "down").
 		health.WithStatusListener(onSystemStatusChanged),
 
-		// These two are only triggered when Checker.Check is executed (usually done by the Handler once for every
-		// HTTP request). These two are not executed for periodic checks!
+		// These two are only triggered when Checker.Check is executed (usually done at the start of the checker and
+		// afterwords only by the Handler once for every HTTP request). The two are not executed for periodic checks!
 		health.WithBeforeCheckListener(beforeRequest),
 		health.WithAfterCheckListener(afterRequest),
 	)
@@ -91,12 +91,12 @@ func afterComponentCheck(ctx context.Context, state health.CheckState) {
 
 func beforeRequest(ctx context.Context, state map[string]health.CheckState) context.Context {
 	logger := getLogger(ctx)
-	logger.Info("starting new check")
+	logger.Info("starting system health status check")
 	return setLogger(ctx, logger)
 }
 
 func afterRequest(ctx context.Context, state map[string]health.CheckState) context.Context {
-	getLogger(ctx).Info("finished check")
+	getLogger(ctx).Info("finished system health status check")
 	return ctx
 }
 
