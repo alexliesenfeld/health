@@ -114,25 +114,25 @@ type (
 	// be invoked before a periodic check function is executed!
 	AfterCheckListener func(ctx context.Context, state map[string]CheckState) context.Context
 
-	// ComponentStatusListenerFunc is a callback function that will be called
+	// ComponentStatusListener is a callback function that will be called
 	// when a components availability status changes (e.g. from "up" to "down").
-	ComponentStatusListenerFunc func(ctx context.Context, state CheckState)
+	ComponentStatusListener func(ctx context.Context, state CheckState)
 
-	// BeforeComponentCheckListenerFunc is a callback function that will be called
+	// BeforeComponentCheckListener is a callback function that will be called
 	// right before a components availability status will be checked.
 	// The listener is allowed to add/remove values to the context in
 	// parameter ctx. The new context is expected in the return value
 	// of the function. If you do not want to extend the context, just
 	// return the passed ctx parameter.
-	BeforeComponentCheckListenerFunc func(ctx context.Context, name string, state CheckState) context.Context
+	BeforeComponentCheckListener func(ctx context.Context, name string, state CheckState) context.Context
 
-	// AfterComponentCheckListenerFunc is a callback function that will be called
+	// AfterComponentCheckListener is a callback function that will be called
 	// right after a components availability status will be checked.
 	// The listener is allowed to add or remove values to/from the context
 	// in parameter ctx. The new context is expected in the return value of the function.
 	// If you do not want to extend the context, just return the passed ctx
 	// parameter.
-	AfterComponentCheckListenerFunc func(ctx context.Context, state CheckState) context.Context
+	AfterComponentCheckListener func(ctx context.Context, state CheckState) context.Context
 
 	// AvailabilityStatus expresses the availability of either
 	// a component or the whole system.

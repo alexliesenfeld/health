@@ -26,13 +26,13 @@ type (
 		MaxContiguousFails uint // Optional
 		// StatusChangeListener allows to set a listener that will be called
 		// whenever the AvailabilityStatus of the check changes.
-		StatusChangeListener ComponentStatusListenerFunc // Optional
+		StatusChangeListener ComponentStatusListener // Optional
 		// BeforeCheckListener is a callback function that will be called
 		// right before a components availability status will be checked.
-		BeforeCheckListener BeforeComponentCheckListenerFunc // Optional
+		BeforeCheckListener BeforeComponentCheckListener // Optional
 		// AfterCheckListener is a callback function that will be called
 		// right after a components availability status was checked.
-		AfterCheckListener AfterComponentCheckListenerFunc // Optional
+		AfterCheckListener AfterComponentCheckListener // Optional
 		updateInterval     time.Duration
 	}
 
