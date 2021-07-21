@@ -62,7 +62,7 @@ func TestWhenErrorThenStatusDown(t *testing.T) {
 	now := time.Now()
 	doTestEvaluateAvailabilityStatus(t, StatusDown, 0, 0, CheckState{
 		LastCheckedAt: &now,
-		LastResult:    fmt.Errorf("example error"),
+		Result:        fmt.Errorf("example error"),
 	})
 }
 
@@ -72,7 +72,7 @@ func TestWhenErrorAndMaxFailuresThresholdNotCrossedThenStatusWarn(t *testing.T) 
 
 	doTestEvaluateAvailabilityStatus(t, StatusUp, 1*time.Second, uint(10), CheckState{
 		LastCheckedAt:       &now,
-		LastResult:          fmt.Errorf("example error"),
+		Result:              fmt.Errorf("example error"),
 		FirstCheckStartedAt: now.Add(-2 * time.Minute),
 		LastSuccessAt:       &lastSuccessAt,
 		ContiguousFails:     1,
@@ -84,7 +84,7 @@ func TestWhenErrorAndMaxTimeInErrorThresholdNotCrossedThenStatusWarn(t *testing.
 	lastSuccessAt := now.Add(-2 * time.Minute)
 	doTestEvaluateAvailabilityStatus(t, StatusUp, 1*time.Hour, uint(1), CheckState{
 		LastCheckedAt:       &now,
-		LastResult:          fmt.Errorf("example error"),
+		Result:              fmt.Errorf("example error"),
 		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
 		LastSuccessAt:       &lastSuccessAt,
 		ContiguousFails:     100,
@@ -96,7 +96,7 @@ func TestWhenErrorAndAllThresholdsCrossedThenStatusDown(t *testing.T) {
 	lastSuccessAt := now.Add(-2 * time.Minute)
 	doTestEvaluateAvailabilityStatus(t, StatusDown, 1*time.Second, uint(1), CheckState{
 		LastCheckedAt:       &now,
-		LastResult:          fmt.Errorf("example error"),
+		Result:              fmt.Errorf("example error"),
 		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
 		LastSuccessAt:       &lastSuccessAt,
 		ContiguousFails:     5,
@@ -222,7 +222,7 @@ func TestCheckExecuteListeners(t *testing.T) {
 	// Assert
 	assert.Equal(t, StatusDown, *actualStatus)
 	assert.Equal(t, 1, len(*actualResults))
-	assert.Equal(t, expectedErr, (*actualResults)[expectedCheckName].LastResult)
+	assert.Equal(t, expectedErr, (*actualResults)[expectedCheckName].Result)
 	assert.Equal(t, StatusDown, (*actualResults)[expectedCheckName].Status)
 }
 

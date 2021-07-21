@@ -11,29 +11,47 @@ type (
 	Check struct {
 		// The Name must be unique among all checks. Name is a required attribute.
 		Name string // Required
+
 		// Check is the check function that will be executed to check availability.
 		// This function must return an error if the checked service is considered
 		// not available. Check is a required attribute.
 		Check func(ctx context.Context) error // Required
+
 		// Timeout will override the global timeout value, if it is smaller than
 		// the global timeout (see WithTimeout).
 		Timeout time.Duration // Optional
+
 		// MaxTimeInError will set a duration for how long a service must be
 		// in an error state until it is considered down/unavailable.
 		MaxTimeInError time.Duration // Optional
+
 		// MaxContiguousFails will set a maximum number of contiguous
 		// check fails until the service is considered down/unavailable.
 		MaxContiguousFails uint // Optional
+
 		// StatusListener allows to set a listener that will be called
-		// whenever the AvailabilityStatus of the check changes.
-		StatusListener ComponentStatusListener // Optional
+		// whenever the AvailabilityStatus (e.g. from "up" to "down").
+		// The function is allowed to add add values to the context in
+		// parameter ctx. The new context is expected in the return value
+		// of the function. The new context will be used for the rest of the
+		// check execution (i.e, will be passed to all downstream function
+		// calls, such as all following lifecycle functions).
+		StatusListener func(ctx context.Context, state CheckState) context.Context // Optional
+
 		// BeforeCheckListener is a callback function that will be called
-		// right before a components availability status will be checked.
-		BeforeCheckListener BeforeComponentCheckListener // Optional
-		// AfterCheckListener is a callback function that will be called
-		// right after a components availability status was checked.
-		AfterCheckListener AfterComponentCheckListener // Optional
-		updateInterval     time.Duration
+		// right before a components availability status is checked.
+		// The function is allowed to add add values to the context in
+		// parameter ctx. The new context is expected in the return value
+		// of the function. The new context will be used for the rest of the
+		// check execution (i.e, will be passed to all downstream function
+		// calls, such as all following lifecycle functions).
+		BeforeCheckListener func(ctx context.Context, name string, state CheckState) context.Context // Optional
+
+		// BeforeCheckListener is a callback function that will be called
+		// right after a components availability status has been checked.
+		AfterCheckListener func(ctx context.Context, state CheckState)
+
+		updateInterval time.Duration
 	}
 
 	option func(*healthCheckConfig)
@@ -83,29 +101,41 @@ func WithTimeout(timeout time.Duration) option {
 	}
 }
 
-// WithStatusListener registers a handler function that will be called whenever the overall system health
-// AvailabilityStatus changes.
-func WithStatusListener(listener StatusListener) option {
+// WithStatusListener registers a handler function that will be called whenever the overall/aggregated system health
+// status changes (e.g. from "up" to "down").
+func WithStatusListener(listener func(context.Context, AvailabilityStatus, map[string]CheckState) context.Context) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.statusChangeListener = listener
 	}
 }
 
-// WithBeforeCheckListener is triggered before Checker.Check is executed.
-// Attention: It will not be executed for periodic checks! It is usually
-// executed as a part of processing of HTTP requests received on the
-// health endpoint.
-func WithBeforeCheckListener(listener BeforeCheckListener) option {
+// WithBeforeCheckListener adds a listener function that is triggered
+// before Checker.Check is executed. The function is allowed to add add
+// values to the context in parameter ctx. The new context is expected
+// in the return value of the function. The new context will be used
+// for the rest of the check execution (i.e, will be passed to all
+// downstream function calls, such as all following lifecycle functions).
+// Attention: This function will not be executed for periodic checks!
+// This is because periodic check functions are executed (asynchronously)
+// on their own time schedule, separate from regular (synchronous)
+// checking that happens when by invoking Checker.Check.
+// What it means for you is that this function will be called for non-periodic
+// checks on each HTTP request, but never for periodic checks.
+func WithBeforeCheckListener(listener func(context.Context, AvailabilityStatus, map[string]CheckState) context.Context) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.beforeSystemCheckListener = listener
 	}
 }
 
-// WithAfterCheckListener is triggered after Checker.Check is executed.
-// Attention: It will not be executed for periodic checks! It is usually
-// executed as a part of processing of HTTP requests received on the
-// health endpoint.
-func WithAfterCheckListener(listener AfterCheckListener) option {
+// WithAfterCheckListener adds a listener function that is triggered
+// after Checker.Check was executed.
+// Attention: This function will not be executed for periodic checks!
+// This is because periodic check functions are executed (asynchronously)
+// on their own time schedule, separate from regular (synchronous)
+// checking that happens when by invoking Checker.Check.
+// What it means for you is that this function will be called for non-periodic
+// checks on each HTTP request, but never for periodic checks.
+func WithAfterCheckListener(listener func(context.Context, AvailabilityStatus, map[string]CheckState)) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.afterSystemCheckListener = listener
 	}

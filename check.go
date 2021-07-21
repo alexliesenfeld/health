@@ -16,9 +16,9 @@ type (
 		checks                    map[string]*Check
 		maxErrMsgLen              uint
 		cacheTTL                  time.Duration
-		beforeSystemCheckListener BeforeCheckListener
-		afterSystemCheckListener  AfterCheckListener
-		statusChangeListener      StatusListener
+		beforeSystemCheckListener func(context.Context, AvailabilityStatus, map[string]CheckState) context.Context
+		statusChangeListener      func(context.Context, AvailabilityStatus, map[string]CheckState) context.Context
+		afterSystemCheckListener  func(context.Context, AvailabilityStatus, map[string]CheckState)
 	}
 
 	defaultChecker struct {
@@ -80,59 +80,13 @@ type (
 		LastFailureAt *time.Time
 		// FirstCheckStartedAt holds the time of when the first check was started.
 		FirstCheckStartedAt time.Time
-		// LastResult holds the error of the last check (nil if successful).
-		LastResult error
 		// ContiguousFails holds the number of how often the check failed in a row.
 		ContiguousFails uint
+		// Result holds the error of the last check (nil if successful).
+		Result error
 		// The current availability status of the check.
 		Status AvailabilityStatus
 	}
-
-	// StatusListener is a callback function that will be called
-	// when the system availability status changes (e.g. from "up" to "down").
-	StatusListener func(ctx context.Context, status AvailabilityStatus, state map[string]CheckState)
-
-	// BeforeCheckListener is a callback function that will be called
-	// right before a the availability status of the system will be checked.
-	// The listener is allowed to add/remove values to the context in
-	// parameter ctx. The new context is expected in the return value
-	// of the function. If you do not want to extend the context, just
-	// return the passed ctx parameter.
-	// Attention: This listener will only be invoked when the Checker.Check
-	// function is executed (i.e., for every HTTP request). It will not
-	// be invoked before a periodic check function is executed!
-	BeforeCheckListener func(ctx context.Context, state map[string]CheckState) context.Context
-
-	// AfterCheckListener is a callback function that will be called
-	// right after a the availability status of the system was checked.
-	// The listener is allowed to add or remove values to/from the context
-	// in parameter ctx. The new context is expected in the return value of the function.
-	// If you do not want to extend the context, just return the passed ctx
-	// parameter.
-	// Attention: This listener will only be invoked when the Checker.Check
-	// function is executed (i.e., for every HTTP request). It will not
-	// be invoked before a periodic check function is executed!
-	AfterCheckListener func(ctx context.Context, state map[string]CheckState) context.Context
-
-	// ComponentStatusListener is a callback function that will be called
-	// when a components availability status changes (e.g. from "up" to "down").
-	ComponentStatusListener func(ctx context.Context, state CheckState) context.Context
-
-	// BeforeComponentCheckListener is a callback function that will be called
-	// right before a components availability status will be checked.
-	// The listener is allowed to add/remove values to the context in
-	// parameter ctx. The new context is expected in the return value
-	// of the function. If you do not want to extend the context, just
-	// return the passed ctx parameter.
-	BeforeComponentCheckListener func(ctx context.Context, name string, state CheckState) context.Context
-
-	// AfterComponentCheckListener is a callback function that will be called
-	// right after a components availability status will be checked.
-	// The listener is allowed to add or remove values to/from the context
-	// in parameter ctx. The new context is expected in the return value of the function.
-	// If you do not want to extend the context, just return the passed ctx
-	// parameter.
-	AfterComponentCheckListener func(ctx context.Context, state CheckState)
 
 	// AvailabilityStatus expresses the availability of either
 	// a component or the whole system.
@@ -245,7 +199,7 @@ func (ck *defaultChecker) Check(ctx context.Context) SystemStatus {
 	)
 
 	if ck.cfg.beforeSystemCheckListener != nil {
-		ctx = ck.cfg.beforeSystemCheckListener(ctx, ck.state)
+		ctx = ck.cfg.beforeSystemCheckListener(ctx, ck.status, ck.state)
 	}
 
 	for _, c := range ck.cfg.checks {
@@ -269,7 +223,7 @@ func (ck *defaultChecker) Check(ctx context.Context) SystemStatus {
 	ck.updateState(ctx, results...)
 
 	if ck.cfg.afterSystemCheckListener != nil {
-		ctx = ck.cfg.afterSystemCheckListener(ctx, ck.state)
+		ck.cfg.afterSystemCheckListener(ctx, ck.status, ck.state)
 	}
 
 	return newSystemStatus(ck.status, ck.mapStateToCheckStatus(), !ck.cfg.detailsDisabled)
@@ -355,10 +309,10 @@ func doCheck(ctx context.Context, check *Check, oldState CheckState) (context.Co
 func checkCurrentState(ctx context.Context, check *Check, state CheckState) CheckState {
 	now := time.Now().UTC()
 
-	state.LastResult = executeCheckFunc(ctx, check)
+	state.Result = executeCheckFunc(ctx, check)
 	state.LastCheckedAt = &now
 
-	if state.LastResult == nil {
+	if state.Result == nil {
 		state.ContiguousFails = 0
 		state.LastSuccessAt = &now
 	} else {
@@ -388,7 +342,7 @@ func executeCheckFunc(ctx context.Context, check *Check) error {
 func newCheckStatus(state *CheckState, maxErrMsgLen uint) CheckStatus {
 	return CheckStatus{
 		Status:    state.Status,
-		Error:     toErrorDesc(state.LastResult, maxErrMsgLen),
+		Error:     toErrorDesc(state.Result, maxErrMsgLen),
 		Timestamp: state.LastCheckedAt,
 	}
 }
@@ -407,7 +361,7 @@ func toErrorDesc(err error, maxLen uint) *string {
 func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFails uint) AvailabilityStatus {
 	if state.LastCheckedAt.IsZero() {
 		return StatusUnknown
-	} else if state.LastResult != nil {
+	} else if state.Result != nil {
 		maxTimeInErrorSinceStartPassed := !state.FirstCheckStartedAt.Add(maxTimeInError).After(time.Now())
 		maxTimeInErrorSinceLastSuccessPassed := state.LastSuccessAt == nil || !state.LastSuccessAt.Add(maxTimeInError).After(time.Now())
 
