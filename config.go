@@ -38,7 +38,7 @@ type (
 		// calls, such as all following lifecycle functions).
 		StatusListener func(ctx context.Context, state CheckState) context.Context // Optional
 
-		Interceptor Interceptor
+		Interceptors []Interceptor
 
 		// BeforeCheckListener is a callback function that will be called
 		// right before a components availability status is checked.
@@ -53,7 +53,8 @@ type (
 		// right after a components availability status has been checked.
 		AfterCheckListener func(ctx context.Context, state CheckState)
 
-		updateInterval time.Duration
+		updateInterval   time.Duration
+		interceptorChain InterceptorFunc
 	}
 
 	option func(*healthCheckConfig)

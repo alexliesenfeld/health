@@ -95,8 +95,8 @@ type (
 		Status AvailabilityStatus
 	}
 
-	Interceptor     func(ctx context.Context, state CheckState, interceptorFunc InterceptorFunc)
-	InterceptorFunc func(ctx context.Context, state CheckState)
+	Interceptor     func(ctx context.Context, name string, state CheckState, next InterceptorFunc) CheckState
+	InterceptorFunc func(ctx context.Context, name string, state CheckState) CheckState
 
 	// AvailabilityStatus expresses the availability of either
 	// a component or the whole system.
@@ -142,6 +142,10 @@ func (ck *defaultChecker) Start() {
 		ck.started = true
 		defer ck.startPeriodicChecks()
 		defer ck.Check(context.Background())
+
+		for _, check := range ck.cfg.checks {
+			check.interceptorChain = newInterceptorChain(check)
+		}
 	}
 
 	ck.mtx.Unlock()
@@ -305,7 +309,7 @@ func doCheck(ctx context.Context, check *Check, oldState CheckState) (context.Co
 		ctx = check.BeforeCheckListener(ctx, check.Name, state)
 	}
 
-	state = checkCurrentState(ctx, check, state)
+	state = check.interceptorChain(ctx, check.Name, state)
 
 	if check.StatusListener != nil && oldState.Status != state.Status {
 		ctx = check.StatusListener(ctx, state)
@@ -395,4 +399,20 @@ func aggregateStatus(results map[string]CheckState) AvailabilityStatus {
 		}
 	}
 	return status
+}
+
+func newInterceptorChain(check *Check) InterceptorFunc {
+	var chain InterceptorFunc = func(ctx context.Context, name string, state CheckState) CheckState {
+		return checkCurrentState(ctx, check, state)
+	}
+
+	for idx := len(check.Interceptors) - 1; idx >= 0; idx-- {
+		intercept := check.Interceptors[idx]
+		downstreamChain := chain
+		chain = func(ctx context.Context, name string, state CheckState) CheckState {
+			return intercept(ctx, name, state, downstreamChain)
+		}
+	}
+
+	return chain
 }
