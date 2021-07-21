@@ -16,17 +16,16 @@ type (
 		checks                    map[string]*Check
 		maxErrMsgLen              uint
 		cacheTTL                  time.Duration
-		beforeSystemCheckListener func(context.Context, AvailabilityStatus, map[string]CheckState) context.Context
-		statusChangeListener      func(context.Context, AvailabilityStatus, map[string]CheckState) context.Context
-		afterSystemCheckListener  func(context.Context, AvailabilityStatus, map[string]CheckState)
+		beforeSystemCheckListener func(context.Context, CheckerState) context.Context
+		statusChangeListener      func(context.Context, CheckerState) context.Context
+		afterSystemCheckListener  func(context.Context, CheckerState)
 	}
 
 	defaultChecker struct {
 		started  bool
 		mtx      sync.Mutex
 		cfg      healthCheckConfig
-		state    map[string]CheckState
-		status   AvailabilityStatus
+		state    CheckerState
 		endChans []chan *sync.WaitGroup
 	}
 
@@ -49,6 +48,14 @@ type (
 		// GetRunningPeriodicCheckCount returns the number of currently
 		// running periodic checks.
 		GetRunningPeriodicCheckCount() int
+	}
+
+	// CheckerState represents the current state of the Checker.
+	CheckerState struct {
+		// Status is the aggregated system health status.
+		Status AvailabilityStatus
+		// CheckState contains the state of all checks.
+		CheckState map[string]CheckState
 	}
 
 	// SystemStatus holds the aggregated system availability status and
@@ -88,6 +95,9 @@ type (
 		Status AvailabilityStatus
 	}
 
+	Interceptor     func(ctx context.Context, state CheckState, interceptorFunc InterceptorFunc)
+	InterceptorFunc func(ctx context.Context, state CheckState)
+
 	// AvailabilityStatus expresses the availability of either
 	// a component or the whole system.
 	AvailabilityStatus string
@@ -117,11 +127,12 @@ func (s AvailabilityStatus) criticality() int {
 }
 
 func newDefaultChecker(cfg healthCheckConfig) *defaultChecker {
-	state := map[string]CheckState{}
+	checkState := map[string]CheckState{}
 	for _, check := range cfg.checks {
-		state[check.Name] = CheckState{Status: StatusUnknown}
+		checkState[check.Name] = CheckState{Status: StatusUnknown}
 	}
-	return &defaultChecker{false, sync.Mutex{}, cfg, state, StatusUnknown, []chan *sync.WaitGroup{}}
+	state := CheckerState{Status: StatusUnknown, CheckState: checkState}
+	return &defaultChecker{false, sync.Mutex{}, cfg, state, []chan *sync.WaitGroup{}}
 }
 
 func (ck *defaultChecker) Start() {
@@ -145,6 +156,7 @@ func (ck *defaultChecker) startPeriodicChecks() {
 		if isPeriodicCheck(check) {
 			var wg *sync.WaitGroup
 			endChan := make(chan *sync.WaitGroup, 1)
+			checkState := ck.state.CheckState[check.Name]
 			ck.endChans = append(ck.endChans, endChan)
 			go func(check Check, state CheckState) {
 			loop:
@@ -163,7 +175,7 @@ func (ck *defaultChecker) startPeriodicChecks() {
 				}
 				close(endChan)
 				wg.Done()
-			}(*check, ck.state[check.Name])
+			}(*check, checkState)
 		}
 	}
 }
@@ -199,19 +211,19 @@ func (ck *defaultChecker) Check(ctx context.Context) SystemStatus {
 	)
 
 	if ck.cfg.beforeSystemCheckListener != nil {
-		ctx = ck.cfg.beforeSystemCheckListener(ctx, ck.status, ck.state)
+		ctx = ck.cfg.beforeSystemCheckListener(ctx, ck.state)
 	}
 
 	for _, c := range ck.cfg.checks {
-		state := ck.state[c.Name]
-		if !isPeriodicCheck(c) && isCacheExpired(cacheTTL, &state) {
+		checkState := ck.state.CheckState[c.Name]
+		if !isPeriodicCheck(c) && isCacheExpired(cacheTTL, &checkState) {
 			numInitiatedChecks++
 			go func(ctx context.Context, check Check, state CheckState) {
 				withCheckContext(ctx, &check, func(ctx context.Context) {
 					_, state = doCheck(ctx, &check, state)
 					resChan <- checkResult{check.Name, state}
 				})
-			}(ctx, *c, state)
+			}(ctx, *c, checkState)
 		}
 	}
 
@@ -223,30 +235,30 @@ func (ck *defaultChecker) Check(ctx context.Context) SystemStatus {
 	ck.updateState(ctx, results...)
 
 	if ck.cfg.afterSystemCheckListener != nil {
-		ck.cfg.afterSystemCheckListener(ctx, ck.status, ck.state)
+		ck.cfg.afterSystemCheckListener(ctx, ck.state)
 	}
 
-	return newSystemStatus(ck.status, ck.mapStateToCheckStatus(), !ck.cfg.detailsDisabled)
+	return newSystemStatus(ck.state.Status, ck.mapStateToCheckStatus(), !ck.cfg.detailsDisabled)
 }
 
 func (ck *defaultChecker) updateState(ctx context.Context, updates ...checkResult) {
 	for _, update := range updates {
-		ck.state[update.checkName] = update.newState
+		ck.state.CheckState[update.checkName] = update.newState
 	}
 
-	oldStatus := ck.status
-	ck.status = aggregateStatus(ck.state)
+	oldAggregatedStatus := ck.state.Status
+	ck.state.Status = aggregateStatus(ck.state.CheckState)
 
-	if oldStatus != ck.status && ck.cfg.statusChangeListener != nil {
-		ck.cfg.statusChangeListener(ctx, ck.status, ck.state)
+	if oldAggregatedStatus != ck.state.Status && ck.cfg.statusChangeListener != nil {
+		ck.cfg.statusChangeListener(ctx, ck.state)
 	}
 }
 
 func (ck *defaultChecker) mapStateToCheckStatus() map[string]CheckStatus {
 	results := map[string]CheckStatus{}
 	for _, c := range ck.cfg.checks {
-		state := ck.state[c.Name]
-		results[c.Name] = newCheckStatus(&state, ck.cfg.maxErrMsgLen)
+		checkState := ck.state.CheckState[c.Name]
+		results[c.Name] = newCheckStatus(&checkState, ck.cfg.maxErrMsgLen)
 	}
 	return results
 }

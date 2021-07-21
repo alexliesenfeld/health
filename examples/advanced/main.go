@@ -44,6 +44,8 @@ func main() {
 		// The following check will be executed periodically every 30 seconds.
 		health.WithPeriodicCheck(15*time.Second, health.Check{
 			Name:                "search-engine",
+			MaxContiguousFails:  5,
+			MaxTimeInError:      2 * time.Minute,
 			BeforeCheckListener: beforeComponentCheck,
 			AfterCheckListener:  afterComponentCheck,
 			StatusListener:      onComponentStatusChanged,
@@ -89,18 +91,18 @@ func afterComponentCheck(ctx context.Context, state health.CheckState) {
 	}
 }
 
-func beforeRequest(ctx context.Context, _ health.AvailabilityStatus, _ map[string]health.CheckState) context.Context {
+func beforeRequest(ctx context.Context, state health.CheckerState) context.Context {
 	logger := getLogger(ctx)
 	logger.Info("starting system health status check")
 	return setLogger(ctx, logger)
 }
 
-func afterRequest(ctx context.Context, status health.AvailabilityStatus, state map[string]health.CheckState) {
+func afterRequest(ctx context.Context, state health.CheckerState) {
 	getLogger(ctx).Info("finished system health status check")
 }
 
-func onSystemStatusChanged(ctx context.Context, status health.AvailabilityStatus, _ map[string]health.CheckState) context.Context {
-	getLogger(ctx).Infof("system status changed to %s", status)
+func onSystemStatusChanged(ctx context.Context, state health.CheckerState) context.Context {
+	getLogger(ctx).Infof("system status changed to %s", state.Status)
 	return ctx
 }
 
@@ -117,4 +119,29 @@ func getLogger(ctx context.Context) *log.Entry {
 		return v
 	}
 	return log.WithFields(log.Fields{"cid": uuid.New()})
+}
+
+func createLogger(ctx context.Context, state health.CheckState, next health.InterceptorFunc) {
+	logger, ok := newGetLogger(ctx)
+	if !ok || logger == nil {
+		logger = log.WithFields(log.Fields{"cid": uuid.New()})
+	}
+	ctx = newSetLogger(ctx, logger)
+	next(ctx, state)
+}
+
+func logComponentCheck(ctx context.Context, state health.CheckState, next health.InterceptorFunc) {
+	logger, _ := newGetLogger(ctx)
+	logger.Infof("starting")
+	next(ctx, state)
+	logger.Infof("stopping")
+}
+
+func newSetLogger(ctx context.Context, logger *log.Entry) context.Context {
+	return context.WithValue(ctx, "logger", logger)
+}
+
+func newGetLogger(ctx context.Context) (*log.Entry, bool) {
+	logger, ok := ctx.Value("logger").(*log.Entry)
+	return logger, ok
 }

@@ -38,6 +38,8 @@ type (
 		// calls, such as all following lifecycle functions).
 		StatusListener func(ctx context.Context, state CheckState) context.Context // Optional
 
+		Interceptor Interceptor
+
 		// BeforeCheckListener is a callback function that will be called
 		// right before a components availability status is checked.
 		// The function is allowed to add add values to the context in
@@ -101,9 +103,12 @@ func WithTimeout(timeout time.Duration) option {
 	}
 }
 
-// WithStatusListener registers a handler function that will be called whenever the overall/aggregated system health
+// WithStatusListener registers a listener function that will be called whenever the overall/aggregated system health
 // status changes (e.g. from "up" to "down").
-func WithStatusListener(listener func(context.Context, AvailabilityStatus, map[string]CheckState) context.Context) option {
+// Attention: There is no restriction on check type. This listener will be called for all check types
+// (periodic and non-periodic checks)! This is apposed to the other two global listeners
+// as defined in WithBeforeCheckListener and WithAfterCheckListener.
+func WithStatusListener(listener func(ctx context.Context, state CheckerState) context.Context) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.statusChangeListener = listener
 	}
@@ -121,7 +126,7 @@ func WithStatusListener(listener func(context.Context, AvailabilityStatus, map[s
 // checking that happens when by invoking Checker.Check.
 // What it means for you is that this function will be called for non-periodic
 // checks on each HTTP request, but never for periodic checks.
-func WithBeforeCheckListener(listener func(context.Context, AvailabilityStatus, map[string]CheckState) context.Context) option {
+func WithBeforeCheckListener(listener func(ctx context.Context, state CheckerState) context.Context) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.beforeSystemCheckListener = listener
 	}
@@ -135,7 +140,7 @@ func WithBeforeCheckListener(listener func(context.Context, AvailabilityStatus, 
 // checking that happens when by invoking Checker.Check.
 // What it means for you is that this function will be called for non-periodic
 // checks on each HTTP request, but never for periodic checks.
-func WithAfterCheckListener(listener func(context.Context, AvailabilityStatus, map[string]CheckState)) option {
+func WithAfterCheckListener(listener func(ctx context.Context, state CheckerState)) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.afterSystemCheckListener = listener
 	}

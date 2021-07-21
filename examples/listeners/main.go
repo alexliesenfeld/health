@@ -89,18 +89,18 @@ func afterComponentCheck(ctx context.Context, state health.CheckState) {
 	}
 }
 
-func beforeRequest(ctx context.Context, status health.AvailabilityStatus, state map[string]health.CheckState) context.Context {
+func beforeRequest(ctx context.Context, state health.CheckerState) context.Context {
 	logger := getLogger(ctx)
 	logger.Info("starting system health status check")
 	return setLogger(ctx, logger)
 }
 
-func afterRequest(ctx context.Context, status health.AvailabilityStatus, state map[string]health.CheckState) {
+func afterRequest(ctx context.Context, state health.CheckerState) {
 	getLogger(ctx).Info("finished system health status check")
 }
 
-func onSystemStatusChanged(ctx context.Context, status health.AvailabilityStatus, state map[string]health.CheckState) context.Context {
-	getLogger(ctx).Infof("system status changed to %s", status)
+func onSystemStatusChanged(ctx context.Context, state health.CheckerState) context.Context {
+	getLogger(ctx).Infof("system status changed to %s", state.Status)
 	return ctx
 }
 
