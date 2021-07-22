@@ -36,7 +36,7 @@ This library provides the following features:
 - Health [status change listeners](https://pkg.go.dev/github.com/alexliesenfeld/health#WithStatusListener).
 - [Flexible lifecycle hooks]()
 - [Caching](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCacheDuration)
-- [Fault tolerance](https://pkg.go.dev/github.com/alexliesenfeld/health#readme-fault-tolerance) based on fail count and/or time thresholds.
+- [Failure tolerance](https://pkg.go.dev/github.com/alexliesenfeld/health#readme-failure-tolerance) based on fail count and/or time thresholds.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) and 
   [http.HandlerFunc](https://golang.org/pkg/net/http/#HandlerFunc) that are fully compatible with 
   [net/http](https://golang.org/pkg/net/http/#ServeMux).
