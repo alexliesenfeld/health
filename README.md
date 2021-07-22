@@ -1,5 +1,4 @@
 <div align="center">
-    <img src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-hug.svg" alt="" width="100px"/>*
     <h1>Health</h1>
 </div>
 
@@ -22,18 +21,10 @@
     <a href="https://github.com/alexliesenfeld/health/issues">Request Feature</a>
 </p>
 
-## Table of Contents
 
-1. [Features](#features)
-1. [Getting Started](#getting-started)
-1. [Caching](#caching)
-1. [Periodic Checks](#periodic-checks)
-1. [Failure Tolerance](#failure-tolerance)
-1. [Listening to Status Changes](#listening-to-status-changes)
-1. [Listening to Lifecycle Events](#listening-to-lifecycle-events)
-1. [License](#license)
 
 ## Features
+<img align="right" src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-hug.svg" alt="" width="150px"/>
 
 This library allows you to build health checks that do not simply return HTTP status code 200 but actually check if all
 necessary components are healthy.
@@ -42,9 +33,9 @@ This library provides the following features:
 
 - Request based and fixed-schedule health checks.
 - Global and check-based timeout management.
-- Caching
 - Lifecycle hooks and status change listeners.
-- Failure tolerance based on fail count and/or time thresholds.
+- Caching
+- Fault tolerance based on fail count and/or time thresholds.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) and 
   [http.HandlerFunc](https://golang.org/pkg/net/http/#HandlerFunc) that are fully compatible with 
   [net/http](https://golang.org/pkg/net/http/#ServeMux).
@@ -117,13 +108,6 @@ would yield a response with HTTP status code `503 (Service Unavailable)`, and th
 }
 ```
 
-## Caching
-
-Health check responses are cached to avoid sending too many request to the services that your program checks and to
-mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set to 1 second by
-default. If you do not want to use caching altogether, you can disable it using the
-`health.WithDisabledCache()` configuration option.
-
 ## Periodic Checks
 
 When executing health check functions synchronously (i.e., for every HTTP request), the overall response delay will be at
@@ -140,6 +124,14 @@ Periodic checks can be configured using the `WithPeriodicCheck` configuration op
 
 You don't need to stick with one check type! You can easily mix check types however it makes sense 
 for your application. 
+
+
+## Caching
+
+Health check responses are cached to avoid sending too many request to the services that your program checks and to
+mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set to 1 second by
+default. If you do not want to use caching altogether, you can disable it using the
+`health.WithDisabledCache()` configuration option.
 
 ## Failure Tolerance
 
