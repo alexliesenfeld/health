@@ -24,18 +24,19 @@
 
 
 ## Features
-<img align="right" src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-hug.svg" alt="" width="150px"/>
 
 This library allows you to build health checks that do not simply return HTTP status code 200 but actually check if all
 necessary components are healthy.
 
 This library provides the following features:
 
-- Request based and fixed-schedule health checks.
-- Global and check-based timeout management.
-- Lifecycle hooks and status change listeners.
-- Caching
-- Fault tolerance based on fail count and/or time thresholds.
+- [Request based](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCheck) (synchronous) and 
+  [fixed-schedule](https://pkg.go.dev/github.com/alexliesenfeld/health#WithPeriodicCheck) (asynchronous) health checks.
+- Timeout management.
+- [Flexible lifecycle hooks]() 
+- Health [status change listeners](https://pkg.go.dev/github.com/alexliesenfeld/health#WithStatusListener).
+- [Caching](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCacheDuration)
+- [Fault tolerance](https://pkg.go.dev/github.com/alexliesenfeld/health#readme-fault-tolerance) based on fail count and/or time thresholds.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) and 
   [http.HandlerFunc](https://golang.org/pkg/net/http/#HandlerFunc) that are fully compatible with 
   [net/http](https://golang.org/pkg/net/http/#ServeMux).
@@ -226,9 +227,3 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Public License for more details.
 
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B26405%2Fgithub.com%2Falexliesenfeld%2Fhealth.svg?type=large)](https://app.fossa.com/projects/custom%2B26405%2Fgithub.com%2Falexliesenfeld%2Fhealth?ref=badge_large)
-
-## Attribution
-
-(*) The image included at the top of this document was created by [Egon Elbre](https://github.com/egonelbre/gophers) 
-and was originally licensed under the [CC0 license](https://creativecommons.org/publicdomain/zero/1.0/). 
-For more information, please head over to its [source repository](https://github.com/egonelbre/gophers).
