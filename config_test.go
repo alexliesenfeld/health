@@ -16,10 +16,12 @@ func TestWithPeriodicCheckConfig(t *testing.T) {
 	cfg := healthCheckConfig{checks: map[string]*Check{}}
 	check := Check{Name: expectedName}
 	interval := 5 * time.Second
+	initialDelay := 1 * time.Minute
 
 	// Act
-	WithPeriodicCheck(interval, check)(&cfg)
+	WithPeriodicCheck(interval, initialDelay, check)(&cfg)
 	check.updateInterval = interval
+	check.initialDelay = initialDelay
 
 	// Assert
 	assert.Equal(t, 1, len(cfg.checks))
@@ -91,7 +93,7 @@ func TestWithStatusChangeListenerConfig(t *testing.T) {
 
 	// Act
 	// Use of non standard AvailabilityStatus codes.
-	WithStatusListener(func(ctx context.Context, state CheckerState) context.Context { return nil })(&cfg)
+	WithStatusListener(func(ctx context.Context, state CheckerState) {})(&cfg)
 
 	// Assert
 	assert.NotNil(t, cfg.statusChangeListener)

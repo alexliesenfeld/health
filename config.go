@@ -31,30 +31,14 @@ type (
 
 		// StatusListener allows to set a listener that will be called
 		// whenever the AvailabilityStatus (e.g. from "up" to "down").
-		// The function is allowed to add add values to the context in
-		// parameter ctx. The new context is expected in the return value
-		// of the function. The new context will be used for the rest of the
-		// check execution (i.e, will be passed to all downstream function
-		// calls, such as all following lifecycle functions).
-		StatusListener func(ctx context.Context, state CheckState) context.Context // Optional
+		StatusListener func(ctx context.Context, name string, state CheckState) // Optional
 
-		Interceptors []Interceptor
+		// Interceptors holds a list of CheckInterceptor instances that will be executed one after another in the
+		// order as they appear in the list.
+		Interceptors []CheckInterceptor
 
-		// BeforeCheckListener is a callback function that will be called
-		// right before a components availability status is checked.
-		// The function is allowed to add add values to the context in
-		// parameter ctx. The new context is expected in the return value
-		// of the function. The new context will be used for the rest of the
-		// check execution (i.e, will be passed to all downstream function
-		// calls, such as all following lifecycle functions).
-		BeforeCheckListener func(ctx context.Context, name string, state CheckState) context.Context // Optional
-
-		// BeforeCheckListener is a callback function that will be called
-		// right after a components availability status has been checked.
-		AfterCheckListener func(ctx context.Context, state CheckState)
-
-		updateInterval   time.Duration
-		interceptorChain InterceptorFunc
+		updateInterval time.Duration
+		initialDelay   time.Duration
 	}
 
 	option func(*healthCheckConfig)
@@ -109,41 +93,19 @@ func WithTimeout(timeout time.Duration) option {
 // Attention: There is no restriction on check type. This listener will be called for all check types
 // (periodic and non-periodic checks)! This is apposed to the other two global listeners
 // as defined in WithBeforeCheckListener and WithAfterCheckListener.
-func WithStatusListener(listener func(ctx context.Context, state CheckerState) context.Context) option {
+func WithStatusListener(listener func(ctx context.Context, state CheckerState)) option {
 	return func(cfg *healthCheckConfig) {
 		cfg.statusChangeListener = listener
 	}
 }
 
-// WithBeforeCheckListener adds a listener function that is triggered
-// before Checker.Check is executed. The function is allowed to add add
-// values to the context in parameter ctx. The new context is expected
-// in the return value of the function. The new context will be used
-// for the rest of the check execution (i.e, will be passed to all
-// downstream function calls, such as all following lifecycle functions).
-// Attention: This function will not be executed for periodic checks!
-// This is because periodic check functions are executed (asynchronously)
-// on their own time schedule, separate from regular (synchronous)
-// checking that happens when by invoking Checker.Check.
-// What it means for you is that this function will be called for non-periodic
-// checks on each HTTP request, but never for periodic checks.
-func WithBeforeCheckListener(listener func(ctx context.Context, state CheckerState) context.Context) option {
+// WithInterceptors registers interceptors that will be called to intercept calls to Checker.Check.
+// Attention: There is no restriction on check type. This listener will be called for all check types
+// (periodic and non-periodic checks)! This is apposed to the other two global listeners
+// as defined in WithBeforeCheckListener and WithAfterCheckListener.
+func WithInterceptors(interceptors ...CheckerInterceptor) option {
 	return func(cfg *healthCheckConfig) {
-		cfg.beforeSystemCheckListener = listener
-	}
-}
-
-// WithAfterCheckListener adds a listener function that is triggered
-// after Checker.Check was executed.
-// Attention: This function will not be executed for periodic checks!
-// This is because periodic check functions are executed (asynchronously)
-// on their own time schedule, separate from regular (synchronous)
-// checking that happens when by invoking Checker.Check.
-// What it means for you is that this function will be called for non-periodic
-// checks on each HTTP request, but never for periodic checks.
-func WithAfterCheckListener(listener func(ctx context.Context, state CheckerState)) option {
-	return func(cfg *healthCheckConfig) {
-		cfg.afterSystemCheckListener = listener
+		cfg.interceptors = interceptors
 	}
 }
 
@@ -180,9 +142,10 @@ func WithCheck(check Check) option {
 // (as in contrast to WithCheck). This allows to process a much higher number of HTTP requests without
 // actually calling the checked services too often or to execute long running checks.
 // This way Checker.Check (and the health endpoint) always returns the last result of the periodic check.
-func WithPeriodicCheck(refreshPeriod time.Duration, check Check) option {
+func WithPeriodicCheck(refreshPeriod time.Duration, initialDelay time.Duration, check Check) option {
 	return func(cfg *healthCheckConfig) {
 		check.updateInterval = refreshPeriod
+		check.initialDelay = initialDelay
 		cfg.checks[check.Name] = &check
 	}
 }

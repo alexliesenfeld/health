@@ -33,8 +33,8 @@ This library provides the following features:
 - [Request based](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCheck) (synchronous) and 
   [fixed-schedule](https://pkg.go.dev/github.com/alexliesenfeld/health#WithPeriodicCheck) (asynchronous) health checks.
 - Timeout management.
-- [Flexible lifecycle hooks]() 
 - Health [status change listeners](https://pkg.go.dev/github.com/alexliesenfeld/health#WithStatusListener).
+- [Flexible lifecycle hooks]()
 - [Caching](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCacheDuration)
 - [Fault tolerance](https://pkg.go.dev/github.com/alexliesenfeld/health#readme-fault-tolerance) based on fail count and/or time thresholds.
 - Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) and 
@@ -73,8 +73,9 @@ func main() {
 			Check:   db.PingContext,
 		}),
 
-		// The following check will be executed periodically every 30 seconds.
-		health.WithPeriodicCheck(30*time.Second, health.Check{
+		// The following check will be executed periodically every 30 seconds 
+		// started without an initial delay.
+		health.WithPeriodicCheck(30*time.Second, 0, health.Check{
 			Name: "search",
 			Check: func(ctx context.Context) error {
 				return fmt.Errorf("this makes the check fail")
@@ -109,23 +110,24 @@ would yield a response with HTTP status code `503 (Service Unavailable)`, and th
 }
 ```
 
-## Periodic Checks
+## Asynchronous Checks
 
-When executing health check functions synchronously (i.e., for every HTTP request), the overall response delay will be at
-least as high as the one of your slowest check function. This is usually OK for smaller applications with a low number
-of quickly checkable dependencies *and enabled caching*. This approach, however, will likely be problematic for
-more involved applications that either have many dependencies and/or some relatively slow check functions.
+With "synchronous" health checking we mean that every HTTP request initiates a health check and waits
+until all check functions complete before returning an aggregated health result in the corresponding HTTP response.
+This approach implicates a response delay that is at least as high as that of the slowest check function. 
+This is usually OK for smaller applications with a low number of quickly checkable dependencies. However, it will
+likely be problematic for more involved applications that either have many dependencies and/or 
+some relatively slow check functions.
 
-Rather than executing health check functions on every HTTP request, periodic checks execute the check function on a 
-fixed schedule. With this approach, the health status is always read from a local cache. 
-This allows responding to HTTP requests instantly without waiting for the check function to complete. 
+Rather than executing health check functions on every HTTP request, the so-called "periodic" (or "asynchronous") 
+checks execute a check function on a fixed schedule. With this approach, the health status is always 
+read from a local cache that is regularly updated in the background. This allows responding to HTTP requests 
+instantly without waiting for a check function to complete. 
 
 Periodic checks can be configured using the `WithPeriodicCheck` configuration option 
 (see [example above](#getting-started)). 
 
-You don't need to stick with one check type! You can easily mix check types however it makes sense 
-for your application. 
-
+You can easily mix synchronous and asynchronous checks in your application, however it makes sense for your application. 
 
 ## Caching
 
@@ -150,7 +152,7 @@ returning a failing health check, so that it can be automatically restarted by y
 
 Failure tolerant health checks let you configure this kind of behaviour.
 
-````go
+```go
 health.WithCheck(health.Check{
     Name:    "unreliable-service",
     // Check is allowed to fail up to 4 times until considered unavailable
@@ -159,65 +161,69 @@ health.WithCheck(health.Check{
     MaxTimeInError:      1 * time.Minute,
     Check: myCheckFunc,
 }),
-````
+```
 
-## Listening to Status Changes
+## Lifecycle Hooks
+### Listening to Status Changes
 
 It can be useful to react to health status changes. For example, you might want to log status changes, so you can easier
 correlate logs during root cause analysis or perform actions to mitigate the impact of an unhealthy component.
 
-This library allows you to configure listener functions that will be called either when the overall system health
-status, or a component status changes.
+This library allows you to configure listener functions that will be called when either the overall/aggregated health
+status changes, or that of a specific component.
 
-### Example
+#### Example
 
-The example below shows a configuration that adds the following two listeners:
+The example below shows a configuration that adds the following two status listeners:
 
-- a status listener to a check that will be called whenever the status of the check changes (e.g., from "up" to "down"),
-- an overall system status listener, that will be called whenever the overall system status changes.
 
 ```go
 health.WithPeriodicCheck(5*time.Second, health.Check{
     Name:   "search",
     Check:  myCheckFunc,
-    StatusListener: func (ctx context.Context, state health.CheckState) {
-        log.Printf("status of component 'search' changed to %s", name, state.Status)
+    StatusListener: func(ctx context.Context, name string, state CheckState) ) {
+        log.Printf("status of component '%s' changed to %s", name, state.Status)
     },
 }),
 
-health.WithStatusListener(func (ctx context.Context, status health.AvailabilityStatus, state map[string]health.CheckState) {
-    log.Printf("overall system health status changed to %s", status)
+health.WithStatusListener(func(ctx context.Context, state CheckerState)) {
+    log.Printf("overall system health status changed to %s", state.Status)
 }),
 ```
 
-## Listening to Lifecycle Events
+### Interceptors
 
 It can be useful to hook into the checking lifecycle to do some processing before and after a check function is 
 executed. For example, you might want to add some tracing information (such as a 
-[Jaeger span](https://www.jaegertracing.io/docs/1.24/architecture/#span)) to the 
-[context.Context](https://pkg.go.dev/context#Context), or do some additional logging. 
+[Jaeger span](https://www.jaegertracing.io/docs/1.24/architecture/#span)), or do some logging. 
 
-This library allows you to define the following listener types: 
-* a [BeforeComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeComponentCheckListener) 
-  and [AfterComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#AfterComponentCheckListener) 
-  for each individual component, and
-* a [BeforeCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeCheckListener) and 
-  [AfterCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#AfterCheckListener) that are triggered 
-  before/after a full system check is executed.
+This library allows you to define interceptors that follow a concept similar to the 
+[middleware pattern](https://drstearns.github.io/tutorials/gomiddleware/). This allows you to perform actions
+before and after a check function is executed. It also allows you to chain multiple interceptors to achieve 
+better separation of functionality and reuse. 
+
+The following interceptors are supported:
+
+* a [CheckInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckInterceptor) 
+  to intercept calls to the check function of one individual component, and
+* a [CheckerInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckerInterceptor) to intercept
+  all calls of [Checker.Check](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker), which corresponds to every 
+  incoming HTTP request on the health endpoint. Hence,
+  [CheckerInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckerInterceptor) does not affect any
+  execution of periodic ("asynchronous") checks (because they are not executed synchronously in
+  [Checker.Check](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker)).
 
 ### Lifecycle hook execution order 
 
 The execution order of check lifecycle functions is as follows:
-1. [BeforeCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeCheckListener)
-1. For every check:   
-    1. [BeforeComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#BeforeComponentCheckListener)
-    1. Check function of your [Check configuration](https://pkg.go.dev/github.com/alexliesenfeld/health#Check).
-    1. [ComponentStatusListener](https://pkg.go.dev/github.com/alexliesenfeld/health#ComponentStatusListener) 
-    1. [AfterComponentCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#AfterComponentCheckListener)
-1. [StatusListener](https://pkg.go.dev/github.com/alexliesenfeld/health#StatusListener)
-1. [AfterCheckListener](https://pkg.go.dev/github.com/alexliesenfeld/health#AfterCheckListener)
-
-Please refer to the [documentation](https://pkg.go.dev/github.com/alexliesenfeld/health) for more information.
+1. Entering [CheckerInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckerInterceptor)
+    1. For every check:   
+        1. Entering [CheckInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckInterceptor)
+            1. [Check](https://pkg.go.dev/github.com/alexliesenfeld/health#Check) function execution.
+            1. [ComponentStatusListener](https://pkg.go.dev/github.com/alexliesenfeld/health#ComponentStatusListener) 
+        1. Leaving [CheckInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckInterceptor)
+    1. [StatusListener](https://pkg.go.dev/github.com/alexliesenfeld/health#StatusListener)
+1. Leaving [CheckerInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckerInterceptor)
 
 ## License
 

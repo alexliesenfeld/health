@@ -29,7 +29,7 @@ func main() {
 		}),
 
 		// The following check will be executed periodically every 30 seconds.
-		health.WithPeriodicCheck(30*time.Second, health.Check{
+		health.WithPeriodicCheck(30*time.Second, 0, health.Check{
 			Name: "search",
 			Check: func(ctx context.Context) error {
 				return fmt.Errorf("this makes the check fail")

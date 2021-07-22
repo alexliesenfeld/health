@@ -105,7 +105,7 @@ func TestWhenErrorAndAllThresholdsCrossedThenStatusDown(t *testing.T) {
 
 func TestStartStopManualPeriodicChecks(t *testing.T) {
 	ckr := NewChecker(
-		WithPeriodicCheck(50*time.Minute, Check{
+		WithPeriodicCheck(50*time.Minute, 0, Check{
 			Name: "check",
 			Check: func(ctx context.Context) error {
 				return nil
@@ -131,7 +131,7 @@ func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err erro
 				return nil
 			},
 		}),
-		WithPeriodicCheck(updateInterval, Check{
+		WithPeriodicCheck(updateInterval, 0, Check{
 			Name: "check2",
 			Check: func(ctx context.Context) error {
 				return err
@@ -168,9 +168,9 @@ The following tests should be removed and a more general test should be written 
 public interface of the checker rather than private functions.
 */
 
-// TODO: Add test for checkCurrentState
-// TODO: Add test for checkCurrentState
-// TODO: Add test for mapStateToCheckStatus
+// TODO: Add test for createNextCheckState
+// TODO: Add test for createNextCheckState
+// TODO: Add test for mapStateToCheckerResult
 
 /*
 func TestToErrorDescErrorShortened(t *testing.T) {
@@ -223,7 +223,7 @@ func TestCheckExecuteListeners(t *testing.T) {
 	assert.Equal(t, StatusDown, *actualStatus)
 	assert.Equal(t, 1, len(*actualResults))
 	assert.Equal(t, expectedErr, (*actualResults)[expectedCheckName].Result)
-	assert.Equal(t, StatusDown, (*actualResults)[expectedCheckName].Status)
+	assert.Equal(t, StatusDown, (*actualResults)[expectedCheckName].CheckerResult)
 }
 
 
@@ -242,7 +242,7 @@ func TestInternalCheckWithCheckSuccess(t *testing.T) {
 	}
 
 	// Act
-	result := doCheck(context.Background(), check, state)
+	result := executeCheck(context.Background(), check, state)
 
 	// Assert
 	assert.Equal(t, true, state.LastCheckedAt.Before(result.newState.LastCheckedAt))
@@ -267,7 +267,7 @@ func TestInternalCheckWithCheckError(t *testing.T) {
 	}
 
 	// Act
-	result := doCheck(context.Background(), check, state)
+	result := executeCheck(context.Background(), check, state)
 
 	// Assert
 	assert.Equal(t, true, state.LastCheckedAt.Before(result.newState.LastCheckedAt))
@@ -281,25 +281,25 @@ func TestInternalCheckWithCheckError(t *testing.T) {
 func TestNewAggregatedCheckStatusWithDetails(t *testing.T) {
 	// Arrange
 	errMsg := "this is an error message"
-	testData := map[string]CheckStatus{"check1": {StatusDown, time.Now(), &errMsg}}
+	testData := map[string]CheckResult{"check1": {StatusDown, time.Now(), &errMsg}}
 
 	// Act
-	result := newSystemStatus(StatusDown, testData, true)
+	result := newCheckerResults(StatusDown, testData, true)
 
 	// Assert
-	assert.Equal(t, StatusDown, result.Status)
+	assert.Equal(t, StatusDown, result.CheckerResult)
 	assert.Equal(t, true, reflect.DeepEqual(&testData, result.Details))
 }
 
 func TestNewAggregatedCheckStatusWithoutDetails(t *testing.T) {
 	// Arrange
-	testData := map[string]CheckStatus{}
+	testData := map[string]CheckResult{}
 
 	// Act
-	result := newSystemStatus(StatusDown, testData, false)
+	result := newCheckerResults(StatusDown, testData, false)
 
 	// Assert
-	assert.Equal(t, StatusDown, result.Status)
+	assert.Equal(t, StatusDown, result.CheckerResult)
 	assert.Nil(t, result.Details)
 }
 

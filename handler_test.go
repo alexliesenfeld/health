@@ -26,15 +26,15 @@ func (ck *checkerMock) Stop() {
 	ck.Called()
 }
 
-func (ck *checkerMock) Check(ctx context.Context) SystemStatus {
-	return ck.Called(ctx).Get(0).(SystemStatus)
+func (ck *checkerMock) Check(ctx context.Context) CheckerResult {
+	return ck.Called(ctx).Get(0).(CheckerResult)
 }
 
 func (ck *checkerMock) GetRunningPeriodicCheckCount() int {
 	return ck.Called().Get(0).(int)
 }
 
-func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatus SystemStatus, expectedStatusCode int) {
+func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatus CheckerResult, expectedStatusCode int) {
 	// Arrange
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "https://localhost/foo", nil)
@@ -53,7 +53,7 @@ func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatu
 	assert.Equal(t, response.Header().Get("content-type"), "application/json; charset=utf-8")
 	assert.Equal(t, response.Result().StatusCode, expectedStatusCode)
 
-	result := SystemStatus{}
+	result := CheckerResult{}
 	_ = json.Unmarshal(response.Body.Bytes(), &result)
 	log.Printf("returned %+v, want %+v", result.Details, expectedStatus.Details)
 
@@ -63,9 +63,9 @@ func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatu
 func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 	now := time.Now().UTC()
 	err := "hello"
-	status := SystemStatus{
+	status := CheckerResult{
 		Status: StatusUnknown,
-		Details: &map[string]CheckStatus{
+		Details: &map[string]CheckResult{
 			"check1": {Status: StatusDown, Timestamp: &now, Error: &err},
 			"check2": {Status: StatusUp, Timestamp: &now, Error: nil},
 		},
@@ -76,9 +76,9 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 
 func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 	now := time.Now().UTC()
-	status := SystemStatus{
+	status := CheckerResult{
 		Status: StatusUp,
-		Details: &map[string]CheckStatus{
+		Details: &map[string]CheckResult{
 			"check1": {Status: StatusUp, Timestamp: &now, Error: nil},
 		},
 	}
@@ -89,9 +89,9 @@ func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
 	now := time.Now().UTC()
 	err := "an error message"
-	status := SystemStatus{
+	status := CheckerResult{
 		Status: StatusDown,
-		Details: &map[string]CheckStatus{
+		Details: &map[string]CheckResult{
 			"check1": {Status: StatusDown, Timestamp: &now, Error: &err},
 		},
 	}
