@@ -54,9 +54,6 @@ func main() {
 	http.ListenAndServe(":3000", nil)
 }
 
-// **************************************************************
-// Event listener functions
-// **************************************************************
 func onComponentStatusChanged(_ context.Context, name string, state health.CheckState) {
 	log.Infof("component %s changed status to %s", name, state.Status)
 }
