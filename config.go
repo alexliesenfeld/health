@@ -100,30 +100,43 @@ func WithStatusListener(listener func(ctx context.Context, state CheckerState)) 
 	}
 }
 
+// WithMiddleware configures a Handler to use a set of middleware functions
+// before calling Checker.Check (which usually happens on every HTTP request).
 func WithMiddleware(middleware ...Middleware) HandlerOption {
 	return func(cfg *handlerConfig) {
 		cfg.middleware = middleware
 	}
 }
 
-func WithStatusCodeUp(httpStatus int) HandlerOption {
-	return func(cfg *handlerConfig) {
-		cfg.statusCodeUp = httpStatus
-	}
-}
-
+// WithResultWriter configures a Handler to use a specific ResultWriter.
+// By default, JSONResultWriter is used.
 func WithResultWriter(writer ResultWriter) HandlerOption {
 	return func(cfg *handlerConfig) {
 		cfg.resultWriter = writer
 	}
 }
 
+// WithStatusCodeUp sets an HTTP status code that will be sent in case
+// the system is available ("up"). Default is HTTP status code
+// 200 (OK).
+func WithStatusCodeUp(httpStatus int) HandlerOption {
+	return func(cfg *handlerConfig) {
+		cfg.statusCodeUp = httpStatus
+	}
+}
+
+// WithStatusCodeDown sets an HTTP status code that will be sent in case
+// the system is unavailable ("down"). Default is HTTP status code
+// 504 (Service Unavailable).
 func WithStatusCodeDown(httpStatus int) HandlerOption {
 	return func(cfg *handlerConfig) {
 		cfg.statusCodeDown = httpStatus
 	}
 }
 
+// WithDisabledAutostart disables automatic start of a checker when an
+// http.Handler is created (see NewHandler). If disabled, you need to start
+// the Checker yourself by calling Checker.Start.
 func WithDisabledAutostart() HandlerOption {
 	return func(cfg *handlerConfig) {
 		cfg.autostartDisabled = true
