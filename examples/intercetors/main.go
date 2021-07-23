@@ -37,8 +37,9 @@ func createCheckLogger(next health.InterceptorFunc) health.InterceptorFunc {
 	return func(ctx context.Context, name string, state health.CheckState) health.CheckState {
 		logger := getLogger(ctx)
 		if logger == nil {
-			logger = log.WithFields(log.Fields{"cid": uuid.New()})
+			logger = log.NewEntry(log.New())
 		}
+		logger = logger.WithFields(log.Fields{"name": name})
 		ctx = setLogger(ctx, logger)
 		return next(ctx, name, state)
 	}
@@ -58,7 +59,7 @@ func createRequestLogger(next health.MiddlewareFunc) health.MiddlewareFunc {
 	return func(ctx context.Context) health.CheckerResult {
 		logger := getLogger(ctx)
 		if logger == nil {
-			logger = log.WithFields(log.Fields{"cid": uuid.New()})
+			logger = log.WithFields(log.Fields{"request": uuid.New()})
 		}
 		ctx = setLogger(ctx, logger)
 		return next(ctx)
