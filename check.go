@@ -8,22 +8,19 @@ import (
 )
 
 type (
-	healthCheckConfig struct {
-		detailsDisabled      bool
+	checkerConfig struct {
 		timeout              time.Duration
-		statusCodeUp         int
-		statusCodeDown       int
 		checks               map[string]*Check
 		maxErrMsgLen         uint
 		cacheTTL             time.Duration
 		statusChangeListener func(context.Context, CheckerState)
-		interceptors         []CheckerInterceptor
+		detailsDisabled      bool
 	}
 
 	defaultChecker struct {
 		started  bool
 		mtx      sync.Mutex
-		cfg      healthCheckConfig
+		cfg      checkerConfig
 		state    CheckerState
 		endChans []chan *sync.WaitGroup
 	}
@@ -51,6 +48,9 @@ type (
 		// GetRunningPeriodicCheckCount returns the number of currently
 		// running periodic checks.
 		GetRunningPeriodicCheckCount() int
+		// IsStarted returns true, if the Checker was started (see Checker.Start)
+		// and is currently still running. Returns false otherwise.
+		IsStarted() bool
 	}
 
 	// CheckerState represents the current state of the Checker.
@@ -98,35 +98,20 @@ type (
 		Error *string `json:"error,omitempty"`
 	}
 
-	// CheckInterceptor is factory function that allows creating new instances of
-	// a CheckInterceptorFunc. The concept behind CheckInterceptor is similar to the
-	// middleware pattern. A CheckInterceptorFunc that is created by calling a
-	// CheckInterceptor is expected to forward the function call to the next
-	// CheckInterceptorFunc (passed to the CheckInterceptor in parameter 'next").
+	// Interceptor is factory function that allows creating new instances of
+	// a InterceptorFunc. The concept behind Interceptor is similar to the
+	// middleware pattern. A InterceptorFunc that is created by calling a
+	// Interceptor is expected to forward the function call to the next
+	// InterceptorFunc (passed to the Interceptor in parameter 'next').
 	// This way, a chain of interceptors is constructed that will eventually
 	// invoke of the components health check function. Each interceptor must therefore
-	// invoke the 'next' interceptor. If the 'next' CheckInterceptorFunc is not called,
+	// invoke the 'next' interceptor. If the 'next' InterceptorFunc is not called,
 	// the components check health function will never be executed.
-	CheckInterceptor func(next CheckInterceptorFunc) CheckInterceptorFunc
+	Interceptor func(next InterceptorFunc) InterceptorFunc
 
-	// CheckInterceptorFunc is an interceptor function that intercepts any call to
+	// InterceptorFunc is an interceptor function that intercepts any call to
 	// a components health check function.
-	CheckInterceptorFunc func(ctx context.Context, name string, state CheckState) CheckState
-
-	// CheckerInterceptor is factory function that allows creating new instances of
-	// a CheckerInterceptorFunc. The concept behind CheckerInterceptorFunc is similar
-	// to the middleware pattern. A CheckerInterceptorFunc that is created by calling a
-	// CheckerInterceptor is expected to forward the function call to the next
-	// CheckerInterceptorFunc (passed to the CheckerInterceptor in parameter 'next").
-	// This way, a chain of interceptors is constructed that will eventually
-	// invoke of the Checker.Check function. Each interceptor must therefore
-	// invoke the 'next' interceptor. If the 'next' CheckerInterceptorFunc is not called,
-	// Checker.Check will never be executed.
-	CheckerInterceptor func(next CheckerInterceptorFunc) CheckerInterceptorFunc
-
-	// CheckerInterceptorFunc is an interceptor function that intercepts any call to
-	// Checker.Check.
-	CheckerInterceptorFunc func(ctx context.Context, state CheckerState) CheckerState
+	InterceptorFunc func(ctx context.Context, name string, state CheckState) CheckState
 
 	// AvailabilityStatus expresses the availability of either
 	// a component or the whole system.
@@ -156,7 +141,7 @@ func (s AvailabilityStatus) criticality() int {
 	}
 }
 
-func newDefaultChecker(cfg healthCheckConfig) *defaultChecker {
+func newDefaultChecker(cfg checkerConfig) *defaultChecker {
 	checkState := map[string]CheckState{}
 	for _, check := range cfg.checks {
 		checkState[check.Name] = CheckState{Status: StatusUnknown}
@@ -178,6 +163,7 @@ func (ck *defaultChecker) Start() {
 	ck.mtx.Unlock()
 }
 
+// Stop implements Checker.Stop. Please refer to Checker.Stop for more information.
 func (ck *defaultChecker) Stop() {
 	ck.mtx.Lock()
 
@@ -202,6 +188,13 @@ func (ck *defaultChecker) GetRunningPeriodicCheckCount() int {
 	return len(ck.endChans)
 }
 
+// IsStarted implements Checker.IsStarted. Please refer to Checker.IsStarted for more information.
+func (ck *defaultChecker) IsStarted() bool {
+	ck.mtx.Lock()
+	defer ck.mtx.Unlock()
+	return ck.started
+}
+
 // Check implements Checker.Check. Please refer to Checker.Check for more information.
 func (ck *defaultChecker) Check(ctx context.Context) CheckerResult {
 	ck.mtx.Lock()
@@ -210,11 +203,7 @@ func (ck *defaultChecker) Check(ctx context.Context) CheckerResult {
 	ctx, cancel := context.WithTimeout(ctx, ck.cfg.timeout)
 	defer cancel()
 
-	ck.state = withCheckerInterceptors(ck.cfg.interceptors, func(ctx context.Context, state CheckerState) CheckerState {
-		ck.state = state
-		ck.runSynchronousChecks(ctx)
-		return ck.state
-	})(ctx, ck.state)
+	ck.runSynchronousChecks(ctx)
 
 	return ck.mapStateToCheckerResult()
 }
@@ -340,7 +329,7 @@ func executeCheck(ctx context.Context, check *Check, oldState CheckState) (conte
 		state.FirstCheckStartedAt = time.Now().UTC()
 	}
 
-	state = withCheckInterceptors(check.Interceptors, func(ctx context.Context, _ string, state CheckState) CheckState {
+	state = withInterceptors(check.Interceptors, func(ctx context.Context, _ string, state CheckState) CheckState {
 		now := time.Now().UTC()
 		checkFuncResult := executeCheckFunc(ctx, check)
 		return createNextCheckState(now, checkFuncResult, check, state)
@@ -400,7 +389,8 @@ func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFai
 		return StatusUnknown
 	} else if state.Result != nil {
 		maxTimeInErrorSinceStartPassed := !state.FirstCheckStartedAt.Add(maxTimeInError).After(time.Now())
-		maxTimeInErrorSinceLastSuccessPassed := state.LastSuccessAt == nil || !state.LastSuccessAt.Add(maxTimeInError).After(time.Now())
+		maxTimeInErrorSinceLastSuccessPassed := state.LastSuccessAt == nil ||
+			!state.LastSuccessAt.Add(maxTimeInError).After(time.Now())
 
 		timeInErrorThresholdCrossed := maxTimeInErrorSinceStartPassed && maxTimeInErrorSinceLastSuccessPassed
 		failCountThresholdCrossed := state.ContiguousFails >= maxFails
@@ -422,15 +412,7 @@ func aggregateStatus(results map[string]CheckState) AvailabilityStatus {
 	return status
 }
 
-func withCheckInterceptors(interceptors []CheckInterceptor, target CheckInterceptorFunc) CheckInterceptorFunc {
-	chain := target
-	for idx := len(interceptors) - 1; idx >= 0; idx-- {
-		chain = interceptors[idx](chain)
-	}
-	return chain
-}
-
-func withCheckerInterceptors(interceptors []CheckerInterceptor, target CheckerInterceptorFunc) CheckerInterceptorFunc {
+func withInterceptors(interceptors []Interceptor, target InterceptorFunc) InterceptorFunc {
 	chain := target
 	for idx := len(interceptors) - 1; idx >= 0; idx-- {
 		chain = interceptors[idx](chain)

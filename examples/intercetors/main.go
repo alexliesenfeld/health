@@ -11,30 +11,31 @@ import (
 )
 
 func main() {
+
 	// Create a new Checker
 	checker := health.NewChecker(
-
 		// A simple successFunc to see if a fake file system up.
 		health.WithCheck(health.Check{
 			Name:         "filesystem",
 			Timeout:      2 * time.Second, // A successFunc specific timeout.
-			Interceptors: []health.CheckInterceptor{createLogger, logComponentCheck, logStatusChange},
+			Interceptors: []health.Interceptor{createLogger, logComponentCheck, logStatusChange},
 			Check: func(ctx context.Context) error {
 				return fmt.Errorf("this is a check error") // example error
 			},
 		}),
 
 		health.WithStatusListener(logSystemStatusChange),
-		health.WithInterceptors(createSystemLogger, logCheck),
 	)
+
+	handler := health.NewHandler(checker, health.WithMiddleware(createSystemLogger, logCheck))
 
 	// We Create a new http.Handler that provides health successFunc information
 	// serialized as a JSON string via HTTP.
-	http.Handle("/health", health.NewHandler(checker))
+	http.Handle("/health", handler)
 	http.ListenAndServe(":3000", nil)
 }
 
-func createLogger(next health.CheckInterceptorFunc) health.CheckInterceptorFunc {
+func createLogger(next health.InterceptorFunc) health.InterceptorFunc {
 	return func(ctx context.Context, name string, state health.CheckState) health.CheckState {
 		logger := getLogger(ctx)
 		if logger == nil {
@@ -45,7 +46,7 @@ func createLogger(next health.CheckInterceptorFunc) health.CheckInterceptorFunc 
 	}
 }
 
-func logComponentCheck(next health.CheckInterceptorFunc) health.CheckInterceptorFunc {
+func logComponentCheck(next health.InterceptorFunc) health.InterceptorFunc {
 	return func(ctx context.Context, name string, state health.CheckState) health.CheckState {
 		logger := getLogger(ctx)
 		logger.Infof("starting component check")
@@ -55,7 +56,7 @@ func logComponentCheck(next health.CheckInterceptorFunc) health.CheckInterceptor
 	}
 }
 
-func logStatusChange(next health.CheckInterceptorFunc) health.CheckInterceptorFunc {
+func logStatusChange(next health.InterceptorFunc) health.InterceptorFunc {
 	return func(ctx context.Context, name string, state health.CheckState) health.CheckState {
 		oldStatus := state.Status
 		res := next(ctx, name, state)
@@ -66,24 +67,24 @@ func logStatusChange(next health.CheckInterceptorFunc) health.CheckInterceptorFu
 	}
 }
 
-func logCheck(next health.CheckerInterceptorFunc) health.CheckerInterceptorFunc {
-	return func(ctx context.Context, state health.CheckerState) health.CheckerState {
+func logCheck(next health.MiddlewareFunc) health.MiddlewareFunc {
+	return func(ctx context.Context) health.CheckerResult {
 		logger := getLogger(ctx)
 		logger.Infof("starting system check")
-		res := next(ctx, state)
+		res := next(ctx)
 		logger.Infof("system check finished")
 		return res
 	}
 }
 
-func createSystemLogger(next health.CheckerInterceptorFunc) health.CheckerInterceptorFunc {
-	return func(ctx context.Context, state health.CheckerState) health.CheckerState {
+func createSystemLogger(next health.MiddlewareFunc) health.MiddlewareFunc {
+	return func(ctx context.Context) health.CheckerResult {
 		logger := getLogger(ctx)
 		if logger == nil {
 			logger = log.WithFields(log.Fields{"cid": uuid.New()})
 		}
 		ctx = setLogger(ctx, logger)
-		return next(ctx, state)
+		return next(ctx)
 	}
 }
 
