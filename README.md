@@ -199,7 +199,7 @@ This library provides two mechanisms that allow you to hook into processing:
   to intercept all calls of [Checker.Check](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker), which 
   corresponds to every incoming HTTP request. In contrary to the usually used 
   [middleware pattern](https://drstearns.github.io/tutorials/gomiddleware/), this middleware allows you to access 
-  check related information and post-process a check result before sending in an HTTP response.
+  check related information and post-process a check result before sending it in an HTTP response.
 
 ## License
 
