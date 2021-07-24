@@ -299,13 +299,13 @@ func (ck *defaultChecker) updateState(ctx context.Context, updates ...checkResul
 
 func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 	var status = ck.state.Status
-	var checkResults map[string]CheckResult
+	var checkResults *map[string]CheckResult
 
 	if !ck.cfg.detailsDisabled {
-		checkResults = map[string]CheckResult{}
+		checkResults = &map[string]CheckResult{}
 		for _, c := range ck.cfg.checks {
 			checkState := ck.state.CheckState[c.Name]
-			checkResults[c.Name] = CheckResult{
+			(*checkResults)[c.Name] = CheckResult{
 				Status:    checkState.Status,
 				Error:     toErrorDesc(checkState.Result, ck.cfg.maxErrMsgLen),
 				Timestamp: checkState.LastCheckedAt,
@@ -313,7 +313,7 @@ func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 		}
 	}
 
-	return CheckerResult{Status: status, Details: &checkResults}
+	return CheckerResult{Status: status, Details: checkResults}
 }
 
 func isCacheExpired(cacheDuration time.Duration, state *CheckState) bool {

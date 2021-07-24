@@ -65,8 +65,8 @@ func main() {
 			MaxTimeInError: 1 * time.Minute,
 		}),
 
-		// The following check will be executed periodically every 30 seconds.
-		health.WithPeriodicCheck(5*time.Second, 10*time.Second, health.Check{
+		// The following check will be executed periodically every 10 seconds with an initial delay of 3 seconds.
+		health.WithPeriodicCheck(10*time.Second, 3*time.Second, health.Check{
 			// Each check gets a unique name
 			Name: "search-engine",
 			// The check function. Return an error if the service is unavailable.
@@ -133,11 +133,11 @@ func volatileFunc() func(ctx context.Context) error {
 }
 
 func loggingInterceptor(next health.InterceptorFunc) health.InterceptorFunc {
-	return func(ctx context.Context, name string, state health.CheckState) health.CheckState {
+	return func(ctx context.Context, name string, oldState health.CheckState) health.CheckState {
 		log.Infof("starting to check component '%s'", name)
-		result := next(ctx, name, state)
-		log.Infof("finished checking component '%s' with result %s", name, state.Status)
-		return result
+		newState := next(ctx, name, oldState)
+		log.Infof("finished checking component '%s' with result '%s'", name, newState.Status)
+		return newState
 	}
 }
 
