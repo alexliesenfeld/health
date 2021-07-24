@@ -34,16 +34,21 @@ func (ck *checkerMock) GetRunningPeriodicCheckCount() int {
 	return ck.Called().Get(0).(int)
 }
 
+func (ck *checkerMock) IsStarted() bool {
+	return ck.Called().Get(0).(bool)
+}
+
 func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatus CheckerResult, expectedStatusCode int) {
 	// Arrange
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "https://localhost/foo", nil)
 
 	ckr := checkerMock{}
+	ckr.On("IsStarted").Return(false)
 	ckr.On("Start")
 	ckr.On("Check", mock.Anything).Return(expectedStatus)
 
-	handler := NewHandlerWithConfig(&ckr, HandlerConfig{statusCodeUp, statusCodeDown, false})
+	handler := NewHandler(&ckr, WithStatusCodeUp(statusCodeUp), WithStatusCodeDown(statusCodeDown))
 
 	// Act
 	handler.ServeHTTP(response, request)

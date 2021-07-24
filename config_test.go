@@ -13,7 +13,7 @@ import (
 func TestWithPeriodicCheckConfig(t *testing.T) {
 	// Arrange
 	expectedName := "test"
-	cfg := healthCheckConfig{checks: map[string]*Check{}}
+	cfg := checkerConfig{checks: map[string]*Check{}}
 	check := Check{Name: expectedName}
 	interval := 5 * time.Second
 	initialDelay := 1 * time.Minute
@@ -31,7 +31,7 @@ func TestWithPeriodicCheckConfig(t *testing.T) {
 func TestWithCheckConfig(t *testing.T) {
 	// Arrange
 	expectedName := "test"
-	cfg := healthCheckConfig{checks: map[string]*Check{}}
+	cfg := checkerConfig{checks: map[string]*Check{}}
 	check := Check{Name: "test"}
 
 	// Act
@@ -44,7 +44,7 @@ func TestWithCheckConfig(t *testing.T) {
 
 func TestWithCacheDurationConfig(t *testing.T) {
 	// Arrange
-	cfg := healthCheckConfig{}
+	cfg := checkerConfig{}
 	duration := 5 * time.Hour
 
 	// Act
@@ -56,7 +56,7 @@ func TestWithCacheDurationConfig(t *testing.T) {
 
 func TestWithDisabledCacheConfig(t *testing.T) {
 	// Arrange
-	cfg := healthCheckConfig{}
+	cfg := checkerConfig{}
 
 	// Act
 	WithDisabledCache()(&cfg)
@@ -67,7 +67,7 @@ func TestWithDisabledCacheConfig(t *testing.T) {
 
 func TestWithTimeoutStartConfig(t *testing.T) {
 	// Arrange
-	cfg := healthCheckConfig{}
+	cfg := checkerConfig{}
 
 	// Act
 	WithTimeout(5 * time.Hour)(&cfg)
@@ -78,7 +78,7 @@ func TestWithTimeoutStartConfig(t *testing.T) {
 
 func TestWithMaxErrorMessageLengthConfig(t *testing.T) {
 	// Arrange
-	cfg := healthCheckConfig{}
+	cfg := checkerConfig{}
 
 	// Act
 	WithMaxErrorMessageLength(300)(&cfg)
@@ -89,7 +89,7 @@ func TestWithMaxErrorMessageLengthConfig(t *testing.T) {
 
 func TestWithStatusChangeListenerConfig(t *testing.T) {
 	// Arrange
-	cfg := healthCheckConfig{}
+	cfg := checkerConfig{}
 
 	// Act
 	// Use of non standard AvailabilityStatus codes.
@@ -103,7 +103,7 @@ func TestWithStatusChangeListenerConfig(t *testing.T) {
 func TestNewWithDefaults(t *testing.T) {
 	// Arrange
 	configApplied := false
-	opt := func(config *healthCheckConfig) { configApplied = true }
+	opt := func(config *checkerConfig) { configApplied = true }
 
 	// Act
 	checker := NewChecker(opt)
@@ -119,7 +119,7 @@ func TestNewWithDefaults(t *testing.T) {
 func TestNewCheckerWithDefaults(t *testing.T) {
 	// Arrange
 	configApplied := false
-	opt := func(config *healthCheckConfig) { configApplied = true }
+	opt := func(config *checkerConfig) { configApplied = true }
 
 	// Act
 	checker := NewChecker(opt)

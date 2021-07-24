@@ -21,8 +21,6 @@
     <a href="https://github.com/alexliesenfeld/health/issues">Request Feature</a>
 </p>
 
-
-
 ## Features
 
 This library allows you to build health checks that do not simply return HTTP status code 200 but actually check if all
@@ -185,36 +183,23 @@ health.WithStatusListener(func(ctx context.Context, state CheckerState)) {
 }),
 ```
 
-### Interceptors
+### Middleware and Interceptors
 
-It can be useful to hook into the checking lifecycle to do some processing before and/or after a check function is 
-executed. For example, you might want to add some tracing information (such as a 
-[tracing span](https://opentracing.io/docs/overview/spans/)), or do some logging. 
+It can be useful to hook into the checking lifecycle to do some processing before and after a health check. 
+For example, you might want to add some tracing information to the [Context](https://pkg.go.dev/context#Context) before
+the check function executes, do some logging or modify the check result before sending the HTTP response 
+(e.g., removing details on failed authentication). 
 
-This library allows you to define interceptors that follow a concept similar to the 
-[middleware pattern](https://drstearns.github.io/tutorials/gomiddleware/). This allows you to perform actions
-before and after a check function is executed. It also allows you to chain multiple interceptors to achieve 
-better separation of functionality and reuse. 
+This library provides two mechanisms that allow you to hook into processing:
 
-The following interceptors are supported:
-
-* a [CheckInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckInterceptor) 
-  to intercept calls to the check function of one individual component, and
-* a [CheckerInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckerInterceptor) to intercept
-  all calls of [Checker.Check](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker), which corresponds to every 
-  incoming HTTP request on the health endpoint.
-
-### Lifecycle hook execution order 
-
-The execution order of lifecycle functions is as follows:
-1. Entering [CheckerInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckerInterceptor)
-    1. For every check:   
-        1. Entering [CheckInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckInterceptor)
-            1. [Check](https://pkg.go.dev/github.com/alexliesenfeld/health#Check) function execution.
-            1. [ComponentStatusListener](https://pkg.go.dev/github.com/alexliesenfeld/health#ComponentStatusListener) 
-        1. Leaving [CheckInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckInterceptor)
-    1. [StatusListener](https://pkg.go.dev/github.com/alexliesenfeld/health#StatusListener)
-1. Leaving [CheckerInterceptor](https://pkg.go.dev/github.com/alexliesenfeld/health#CheckerInterceptor)
+* [Interceptors](https://pkg.go.dev/github.com/alexliesenfeld/health#InterceptorFunc) make it possible to 
+  intercept all calls to a check function. This is useful if you have cross-functional code that needs to be reusable 
+  and should have access to check state information.   
+* [Middleware](https://pkg.go.dev/github.com/alexliesenfeld/health#MiddlewareFunc) gives you the possibility 
+  to intercept all calls of [Checker.Check](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker), which 
+  corresponds to every incoming HTTP request. In contrary to the usually used 
+  [middleware pattern](https://drstearns.github.io/tutorials/gomiddleware/), this middleware allows you to access 
+  check related information and post-process a check result before sending it in an HTTP response.
 
 ## License
 
