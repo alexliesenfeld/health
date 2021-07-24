@@ -39,6 +39,9 @@ This library provides the following features:
   [http.HandlerFunc](https://golang.org/pkg/net/http/#HandlerFunc) that are fully compatible with 
   [net/http](https://golang.org/pkg/net/http/#ServeMux).
 
+[This example](https://github.com/alexliesenfeld/health/tree/main/examples/showcase)
+showcases **all features** of this library.
+
 ## Getting Started
 
 ```go
@@ -112,8 +115,8 @@ would yield a response with HTTP status code `503 (Service Unavailable)`, and th
 
 With "synchronous" health checks we mean that every HTTP request initiates a health check and waits
 until all check functions complete before returning an aggregated health status. This approach is usually OK 
-for smaller applications with a low number of quickly checkable dependencies. However, it will likely be problematic 
-for more involved applications that either have many dependencies and/or some relatively slow check functions.
+for smaller applications with a low number of quickly checkable dependencies. However, it will not scale well 
+enough for more involved applications that either have many dependencies and/or some relatively slow check functions.
 
 Rather than executing health check functions on every HTTP request, periodic (or "asynchronous") 
 health checks execute the check function on a fixed schedule. With this approach, the health status is always 
@@ -159,7 +162,7 @@ health.WithCheck(health.Check{
 }),
 ```
 
-## Lifecycle Hooks
+## Hooks
 ### Listening to Status Changes
 
 It can be useful to react to health status changes. For example, you might want to log status changes, so you can 
