@@ -105,6 +105,7 @@ func TestWhenErrorAndAllThresholdsCrossedThenStatusDown(t *testing.T) {
 
 func TestStartStopManualPeriodicChecks(t *testing.T) {
 	ckr := NewChecker(
+		WithDisabledAutostart(),
 		WithPeriodicCheck(50*time.Minute, 0, Check{
 			Name: "check",
 			Check: func(ctx context.Context) error {
