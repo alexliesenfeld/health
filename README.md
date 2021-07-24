@@ -39,7 +39,7 @@ This library provides the following features:
   [http.HandlerFunc](https://golang.org/pkg/net/http/#HandlerFunc) that are fully compatible with 
   [net/http](https://golang.org/pkg/net/http/#ServeMux).
 
-[This example](https://github.com/alexliesenfeld/health/tree/main/examples/showcase)
+[This example](https://github.com/alexliesenfeld/health/blob/main/examples/showcase/main.go)
 showcases **all features** of this library.
 
 ## Getting Started

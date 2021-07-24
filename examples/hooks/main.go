@@ -59,21 +59,21 @@ func logCheck(next health.InterceptorFunc) health.InterceptorFunc {
 }
 
 func createRequestLogger(next health.MiddlewareFunc) health.MiddlewareFunc {
-	return func(ctx context.Context) health.CheckerResult {
-		logger := getLogger(ctx)
+	return func(r *http.Request) health.CheckerResult {
+		logger := getLogger(r.Context())
 		if logger == nil {
 			logger = log.WithFields(log.Fields{"request": uuid.New()})
 		}
-		ctx = setLogger(ctx, logger)
-		return next(ctx)
+		ctx := setLogger(r.Context(), logger)
+		return next(r.WithContext(ctx))
 	}
 }
 
 func logRequest(next health.MiddlewareFunc) health.MiddlewareFunc {
-	return func(ctx context.Context) health.CheckerResult {
-		logger := getLogger(ctx)
+	return func(r *http.Request) health.CheckerResult {
+		logger := getLogger(r.Context())
 		logger.Infof("starting to process health check request")
-		res := next(ctx)
+		res := next(r)
 		logger.Infof("finished processing of health check request")
 		return res
 	}

@@ -1,7 +1,6 @@
 package health
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -25,9 +24,8 @@ type (
 	Middleware func(next MiddlewareFunc) MiddlewareFunc
 
 	// MiddlewareFunc is a middleware for a health Handler (see NewHandler).
-	// Is is invoked each time the Handler calls Checker.Check (which
-	// corresponds to every incoming HTTP request).
-	MiddlewareFunc func(ctx context.Context) CheckerResult
+	// Is is invoked each time an HTTP request is processed.
+	MiddlewareFunc func(r *http.Request) CheckerResult
 
 	// ResultWriter enabled a Handler (see NewHandler) to write the CheckerResult
 	// to an http.ResponseWriter in a specific format. For example, the
@@ -68,14 +66,13 @@ func NewHandler(checker Checker, options ...HandlerOption) http.HandlerFunc {
 	cfg := createConfig(options)
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Do the check (with configured middleware)
-		result := withMiddleware(cfg.middleware, func(ctx context.Context) CheckerResult {
-			return checker.Check(ctx)
-		})(r.Context())
+		result := withMiddleware(cfg.middleware, func(r *http.Request) CheckerResult {
+			return checker.Check(r.Context())
+		})(r)
 
 		// Write HTTP response
 		disableResponseCache(w)
 		w.WriteHeader(mapHTTPStatus(result.Status, cfg.statusCodeUp, cfg.statusCodeDown))
-
 		cfg.resultWriter.Write(&result, w, r)
 	}
 }
