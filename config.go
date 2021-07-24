@@ -102,7 +102,7 @@ func WithStatusListener(listener func(ctx context.Context, state CheckerState)) 
 
 func WithMiddleware(middleware ...Middleware) HandlerOption {
 	return func(cfg *handlerConfig) {
-		cfg.middleware = middleware
+		cfg.middleware = append(cfg.middleware, middleware...)
 	}
 }
 
@@ -124,8 +124,8 @@ func WithStatusCodeDown(httpStatus int) HandlerOption {
 	}
 }
 
-func WithDisabledAutostart() HandlerOption {
-	return func(cfg *handlerConfig) {
+func WithDisabledAutostart() CheckerOption {
+	return func(cfg *checkerConfig) {
 		cfg.autostartDisabled = true
 	}
 }

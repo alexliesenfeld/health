@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// This is a very simple example that shows the basic features of this library.
 func main() {
 	db, _ := sql.Open("sqlite3", "simple.sqlite")
 	defer db.Close()

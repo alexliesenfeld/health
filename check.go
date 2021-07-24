@@ -15,6 +15,7 @@ type (
 		cacheTTL             time.Duration
 		statusChangeListener func(context.Context, CheckerState)
 		detailsDisabled      bool
+		autostartDisabled    bool
 	}
 
 	defaultChecker struct {
@@ -146,8 +147,18 @@ func newDefaultChecker(cfg checkerConfig) *defaultChecker {
 	for _, check := range cfg.checks {
 		checkState[check.Name] = CheckState{Status: StatusUnknown}
 	}
-	state := CheckerState{Status: StatusUnknown, CheckState: checkState}
-	return &defaultChecker{false, sync.Mutex{}, cfg, state, []chan *sync.WaitGroup{}}
+
+	checker := defaultChecker{
+		cfg:      cfg,
+		state:    CheckerState{Status: StatusUnknown, CheckState: checkState},
+		endChans: []chan *sync.WaitGroup{},
+	}
+
+	if !cfg.autostartDisabled {
+		checker.Start()
+	}
+
+	return &checker
 }
 
 // Start implements Checker.Start. Please refer to Checker.Start for more information.

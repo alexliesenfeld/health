@@ -9,11 +9,10 @@ import (
 
 type (
 	handlerConfig struct {
-		autostartDisabled bool
-		statusCodeUp      int
-		statusCodeDown    int
-		middleware        []Middleware
-		resultWriter      ResultWriter
+		statusCodeUp   int
+		statusCodeDown int
+		middleware     []Middleware
+		resultWriter   ResultWriter
 	}
 
 	// Middleware is factory function that allows creating new instances of
@@ -55,16 +54,18 @@ func (r *JSONResultWriter) Write(result *CheckerResult, w http.ResponseWriter, r
 	return nil
 }
 
+// NewJSONResultWriter creates a new instance of a JSONResultWriter.
+func NewJSONResultWriter() *JSONResultWriter {
+	return &JSONResultWriter{}
+}
+
 // NewHandler creates a new health check http.Handler.
-// If HandlerConfig.DisableCheckerAutostart is not true,
-// the Checker will be started automatically (see Checker.Start).
+// If the Checker was not yet started (see Checker.IsStarted),
+// it will be started automatically (see Checker.Start).
+// You can disable this autostart by adding the WithDisabledAutostart
+// configuration option.
 func NewHandler(checker Checker, options ...HandlerOption) http.HandlerFunc {
 	cfg := createConfig(options)
-
-	if !cfg.autostartDisabled && !checker.IsStarted() {
-		checker.Start()
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Do the check (with configured middleware)
 		result := withMiddleware(cfg.middleware, func(ctx context.Context) CheckerResult {

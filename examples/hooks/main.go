@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// This example shows how to add check interceptors and handler middleware for pre- and post-processing.
+// Both, interceptors and middleware allow to create re-usable functions, mostly used for cross-cutting
+// functionality, such as logging, tracing, authentication, caching, etc.
 func main() {
 
 	// Create a new Checker

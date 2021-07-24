@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// This example shows how this library can be used to listen for health status changes.
 func main() {
 	// Create a new Checker
 	checker := health.NewChecker(
