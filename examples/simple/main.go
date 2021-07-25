@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"database/sql"
-	"fmt"
 	"github.com/alexliesenfeld/health"
+	httpCheck "github.com/hellofresh/health-go/v4/checks/http"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"net/http"
-	"time"
 )
 
 // This is a very simple example that shows the basic features of this library.
@@ -18,23 +16,12 @@ func main() {
 
 	// Create a new Checker
 	checker := health.NewChecker(
-
-		// Configure a global timeout that will be applied to all checks.
-		health.WithTimeout(10*time.Second),
-
 		// A simple check to see if database connection is up.
 		health.WithCheck(health.Check{
-			Name:    "database",
-			Timeout: 2 * time.Second, // A check specific timeout.
-			Check:   db.PingContext,
-		}),
-
-		// The following check will be executed periodically every 30 seconds.
-		health.WithPeriodicCheck(30*time.Second, 0, health.Check{
-			Name: "search",
-			Check: func(ctx context.Context) error {
-				return fmt.Errorf("this makes the check fail")
-			},
+			Name: "google",
+			Check: httpCheck.New(httpCheck.Config{
+				URL: "https://www.google.com",
+			}),
 		}),
 	)
 

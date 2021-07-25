@@ -90,40 +90,50 @@ func WithTimeout(timeout time.Duration) CheckerOption {
 }
 
 // WithStatusListener registers a listener function that will be called whenever the overall/aggregated system health
-// status changes (e.g. from "up" to "down").
-// Attention: There is no restriction on check type. This listener will be called for all check types
-// (periodic and non-periodic checks)! This is apposed to the other two global listeners
-// as defined in WithBeforeCheckListener and WithAfterCheckListener.
+// status changes (e.g. from "up" to "down"). Attention: Because this listener is also executed for synchronous
+// (i.e, request-based) health checks, it should not block processing.
 func WithStatusListener(listener func(ctx context.Context, state CheckerState)) CheckerOption {
 	return func(cfg *checkerConfig) {
 		cfg.statusChangeListener = listener
 	}
 }
 
+// WithMiddleware configures a middleware that will be used by the handler
+// to pro- and post-process HTTP requests and health checks.
+// Refer to the documentation of type Middleware for more information.
 func WithMiddleware(middleware ...Middleware) HandlerOption {
 	return func(cfg *handlerConfig) {
 		cfg.middleware = append(cfg.middleware, middleware...)
 	}
 }
 
+// WithStatusCodeUp sets an HTTP status code that will be used for responses
+// where the system is considered to be available ("up").
+// Default is HTTP status code 200 (OK).
 func WithStatusCodeUp(httpStatus int) HandlerOption {
 	return func(cfg *handlerConfig) {
 		cfg.statusCodeUp = httpStatus
 	}
 }
 
-func WithResultWriter(writer ResultWriter) HandlerOption {
-	return func(cfg *handlerConfig) {
-		cfg.resultWriter = writer
-	}
-}
-
+// WithStatusCodeDown sets an HTTP status code that will be used for responses
+// where the system is considered to be unavailable ("down").
+// Default is HTTP status code 503 (Service Unavailable).
 func WithStatusCodeDown(httpStatus int) HandlerOption {
 	return func(cfg *handlerConfig) {
 		cfg.statusCodeDown = httpStatus
 	}
 }
 
+// WithResultWriter is responsible for writing a health check result (see CheckerResult)
+// into an HTTP response. By default, JSONResultWriter will be used.
+func WithResultWriter(writer ResultWriter) HandlerOption {
+	return func(cfg *handlerConfig) {
+		cfg.resultWriter = writer
+	}
+}
+
+// WithDisabledAutostart disables automatic startup of a Checker instance.
 func WithDisabledAutostart() CheckerOption {
 	return func(cfg *checkerConfig) {
 		cfg.autostartDisabled = true

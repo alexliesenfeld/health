@@ -28,19 +28,18 @@ necessary components are healthy.
 
 This library provides the following features:
 
-- [Request based](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCheck) ("synchronous") and 
-  [fixed-schedule](https://pkg.go.dev/github.com/alexliesenfeld/health#WithPeriodicCheck) ("asynchronous") health checks.
+- Allows creating [request based](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCheck) ("synchronous") and 
+  [periodic](https://pkg.go.dev/github.com/alexliesenfeld/health#WithPeriodicCheck) ("asynchronous") health checks.
 - Timeout management.
-- Health [status change listeners](https://pkg.go.dev/github.com/alexliesenfeld/health#WithStatusListener).
-- [Flexible lifecycle hooks]()
 - [Caching](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCacheDuration)
-- [Failure tolerance](https://pkg.go.dev/github.com/alexliesenfeld/health#readme-failure-tolerance) based on fail count and/or time thresholds.
-- Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) and 
-  [http.HandlerFunc](https://golang.org/pkg/net/http/#HandlerFunc) that are fully compatible with 
+- [Health status change listeners](https://pkg.go.dev/github.com/alexliesenfeld/health#WithStatusListener) and 
+  [lifecycle hooks](https://github.com/alexliesenfeld/health#hooks).
+- [Failure tolerant checks](https://pkg.go.dev/github.com/alexliesenfeld/health#readme-failure-tolerance).
+- Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) and that is fully compatible with 
   [net/http](https://golang.org/pkg/net/http/#ServeMux).
 
 [This example](https://github.com/alexliesenfeld/health/blob/main/examples/showcase/main.go)
-showcases **all features** of this library.
+shows **all features** of this library.
 
 ## Getting Started
 
@@ -111,29 +110,30 @@ would yield a response with HTTP status code `503 (Service Unavailable)`, and th
 }
 ```
 
-## Periodic Checks
+## Periodic Health Checks
 
 With "synchronous" health checks we mean that every HTTP request initiates a health check and waits
-until all check functions complete before returning an aggregated health status. This approach is usually OK 
+until all check functions complete before returning an aggregated health result. This approach is usually OK 
 for smaller applications with a low number of quickly checkable dependencies. However, it will not scale well 
-enough for more involved applications that either have many dependencies and/or some relatively slow check functions.
+enough for more involved applications that either have many dependencies or slow check functions.
 
 Rather than executing health check functions on every HTTP request, periodic (or "asynchronous") 
 health checks execute the check function on a fixed schedule. With this approach, the health status is always 
 read from a local cache that is regularly updated in the background. This allows responding to HTTP requests 
-instantly without waiting for the check function to complete. 
+instantly without waiting for check functions to complete. 
 
 Periodic checks can be configured using the `WithPeriodicCheck` configuration option 
 (see [example above](#getting-started)). 
 
-You can mix synchronous and asynchronous checks in your application. 
+**This library allows you to mix synchronous and asynchronous check functions**, so you can start out
+simple and easily transition into a more scalable health check implementation later. 
 
 ## Caching
 
 Health check responses are cached to avoid sending too many request to the services that your program checks and to
 mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set to 1 second by
-default. If you do not want to use caching altogether, you can disable it using the
-`health.WithDisabledCache()` configuration option.
+default. If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()` 
+configuration option.
 
 ## Failure Tolerance
 
@@ -204,6 +204,70 @@ This library provides two mechanisms that allow you to hook into processing:
   [middleware pattern](https://drstearns.github.io/tutorials/gomiddleware/), this middleware allows you to access 
   check related information and post-process a check result before sending it in an HTTP response.
 
+## Compatibility With Other Libraries
+
+Most existing Go health check libraries came with their own implementations of tool specific check functions 
+(such as for Redis, memcached, Postgres, etc.). Rather than reinventing the wheel and come up with yet another 
+library specific implementation of check functions, the goal was to design this library in a way that makes it possible
+to reuse existing solutions. The following (non-exhaustive) list of health check implementations 
+should work with this library without or minimal adjustments:
+
+* [github.com/hellofresh/health-go](https://github.com/hellofresh/health-go/tree/master/checks) 
+  (see [full example here](https://github.com/alexliesenfeld/health/blob/main/examples/compatibiltiy/hellofresh/main.go))
+  ```go
+  import httpCheck "github.com/hellofresh/health-go/v4/checks/http"
+  ...
+  health.WithCheck(health.Check{
+     Name:    "google",
+     Check:   httpCheck.New(httpCheck.Config{
+        URL: "https://www.google.com",
+     }),
+  }),
+  ```
+* [github.com/etherlabsio/healthcheck](https://github.com/etherlabsio/healthcheck/tree/master/checkers)
+  (see [full example here](https://github.com/alexliesenfeld/health/blob/main/examples/compatibiltiy/etherlabsio/main.go))
+    ```go
+  import "github.com/etherlabsio/healthcheck/v2/checkers"
+  ...
+  health.WithCheck(health.Check{
+      Name:    "database",
+      Check:   checkers.DiskSpace("/var/log", 90).Check,
+  })
+  ```
+* [github.com/heptiolabs/healthcheck](https://github.com/heptiolabs/healthcheck/blob/master/checks.go) 
+  (see [full example here](https://github.com/alexliesenfeld/health/blob/main/examples/compatibiltiy/heptiolabs/main.go))
+  ```go
+  import "github.com/heptiolabs/healthcheck"
+  ...
+  health.WithCheck(health.Check{
+      Name: "google",
+      Check: func(ctx context.Context) error {
+         deadline, _ := ctx.Deadline()
+         timeout := time.Now().Sub(deadline)
+         return healthcheck.HTTPGetCheck("https://www.google.com", timeout)()
+      },
+  }),
+  ```
+* [github.com/InVisionApp/go-health](https://github.com/InVisionApp/go-health/tree/master/checkers)
+  (see [full example here](https://github.com/alexliesenfeld/health/blob/main/examples/compatibiltiy/invisionapp/main.go))
+  ```go
+    import "github.com/InVisionApp/go-health/checkers"
+    ...
+    // Create check as usual (no error checking for brevity)
+    googleURL, err := url.Parse("https://www.google.com")
+    check, err := checkers.NewHTTP(&checkers.HTTPConfig{
+        URL: googleURL,
+    })
+    ...
+    // Add check to this libraries checker.
+    health.WithCheck(health.Check{
+        Name: "google",
+        Check: func(_ context.Context) error {
+            _, err := check.Status() 
+            return err
+        },
+    })
+  ```
 ## License
 
 `health` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
