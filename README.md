@@ -23,14 +23,14 @@
 
 ## Table of Contents
 
-0. [How to install](#features)
+1. [Features](#features)
 1. [Getting started](#getting-started)
-2. [Periodic Health Checks](#periodic-health-checks)
-3. [Failure Tolerance](#caching)
-4. [Listening to Status Changes](#listening-to-status-changes)
-5. [Middleware and Interceptors](#middleware-and-interceptors)
-6. [Compatibility With Other Libraries](#compatibility-with-other-libraries)
-7. [License](#license)
+1. [Periodic Health Checks](#periodic-health-checks)
+1. [Failure Tolerance](#caching)
+1. [Middleware and Interceptors](#middleware-and-interceptors)
+1. [Listening to Status Changes](#listening-to-status-changes)
+1. [Compatibility With Other Libraries](#compatibility-with-other-libraries)
+1. [License](#license)
 
 ## Features
 
@@ -173,6 +173,34 @@ health.WithCheck(health.Check{
 }),
 ```
 
+## Middleware and Interceptors
+
+It can be useful to hook into the checking lifecycle to do some processing before and after a health check.
+For example, you might want to add some tracing information to the [Context](https://pkg.go.dev/context#Context) before
+the check function executes, do some logging or modify the check result before sending the HTTP response
+(e.g., removing details on failed authentication).
+
+This library provides two mechanisms that allow you to hook into processing:
+
+* [Interceptors](https://pkg.go.dev/github.com/alexliesenfeld/health#InterceptorFunc) make it possible to
+  intercept all calls to a check function. This is useful if you have cross-functional code that needs to be reusable
+  and should have access to check state information.
+
+  | Interceptor   | Description                                            |
+  | ------------- |:-------------------------------------------------------|
+  | BasicLogger   | Basic component check function logging functionality   |
+
+* [Middleware](https://pkg.go.dev/github.com/alexliesenfeld/health#MiddlewareFunc) gives you the possibility
+  to intercept all calls of [Checker.Check](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker), which
+  corresponds to every incoming HTTP request. In contrary to the usually used
+  [middleware pattern](https://drstearns.github.io/tutorials/gomiddleware/), this middleware allows you to access
+  check related information and post-process a check result before sending it in an HTTP response.
+
+  | Middleware    | Description                                                      |
+  | ------------- |:-----------------------------------------------------------------|
+  | BasicLogger   | Basic request-oriented logging functionality                     |
+  | CustomAuth    | Reduces exposed health details based on authentication success.  |
+  | BasicAuth     | Same as CustomAuth but uses basic auth for authentication.       |
 
 ## Listening to Status Changes
 
@@ -197,29 +225,11 @@ health.WithStatusListener(func(ctx context.Context, state CheckerState)) {
 }),
 ```
 
-## Middleware and Interceptors
-
-It can be useful to hook into the checking lifecycle to do some processing before and after a health check. 
-For example, you might want to add some tracing information to the [Context](https://pkg.go.dev/context#Context) before
-the check function executes, do some logging or modify the check result before sending the HTTP response 
-(e.g., removing details on failed authentication). 
-
-This library provides two mechanisms that allow you to hook into processing:
-
-* [Interceptors](https://pkg.go.dev/github.com/alexliesenfeld/health#InterceptorFunc) make it possible to 
-  intercept all calls to a check function. This is useful if you have cross-functional code that needs to be reusable 
-  and should have access to check state information.   
-* [Middleware](https://pkg.go.dev/github.com/alexliesenfeld/health#MiddlewareFunc) gives you the possibility 
-  to intercept all calls of [Checker.Check](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker), which 
-  corresponds to every incoming HTTP request. In contrary to the usually used 
-  [middleware pattern](https://drstearns.github.io/tutorials/gomiddleware/), this middleware allows you to access 
-  check related information and post-process a check result before sending it in an HTTP response.
-
 ## Compatibility With Other Libraries
 
 Most existing Go health check libraries come with their own implementations of tool specific check functions 
 (such as for Redis, memcached, Postgres, etc.). Rather than reinventing the wheel and come up with yet another 
-library specific implementation of check functions, the goal was to design this library in a way that makes it possible
+library specific implementation of check functions, the goal was to design this library in a way that makes it easy
 to reuse existing solutions. The following (non-exhaustive) list of health check implementations 
 should work with this library without or minimal adjustments:
 
