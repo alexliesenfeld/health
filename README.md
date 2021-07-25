@@ -21,6 +21,17 @@
     <a href="https://github.com/alexliesenfeld/health/issues">Request Feature</a>
 </p>
 
+## Table of Contents
+
+0. [How to install](#features)
+1. [Getting started](#getting-started)
+2. [Periodic Health Checks](#periodic-health-checks)
+3. [Failure Tolerance](#caching)
+4. [Listening to Status Changes](#listening-to-status-changes)
+5. [Middleware and Interceptors](#middleware-and-interceptors)
+6. [Compatibility With Other Libraries](#compatibility-with-other-libraries)
+7. [License](#license)
+
 ## Features
 
 This library allows you to build health checks that do not simply return HTTP status code 200 but actually check if all
@@ -162,8 +173,8 @@ health.WithCheck(health.Check{
 }),
 ```
 
-## Hooks
-### Listening to Status Changes
+
+## Listening to Status Changes
 
 It can be useful to react to health status changes. For example, you might want to log status changes, so you can 
 easier correlate logs during root cause analysis or perform actions to mitigate the impact of an unhealthy component.
@@ -171,7 +182,7 @@ easier correlate logs during root cause analysis or perform actions to mitigate 
 This library allows you to configure listener functions that will be called when either the overall/aggregated health
 status changes, or that of a specific component.
 
-#### Example
+### Example
 ```go
 health.WithPeriodicCheck(5*time.Second, health.Check{
     Name:   "search",
@@ -186,7 +197,7 @@ health.WithStatusListener(func(ctx context.Context, state CheckerState)) {
 }),
 ```
 
-### Middleware and Interceptors
+## Middleware and Interceptors
 
 It can be useful to hook into the checking lifecycle to do some processing before and after a health check. 
 For example, you might want to add some tracing information to the [Context](https://pkg.go.dev/context#Context) before
@@ -206,7 +217,7 @@ This library provides two mechanisms that allow you to hook into processing:
 
 ## Compatibility With Other Libraries
 
-Most existing Go health check libraries came with their own implementations of tool specific check functions 
+Most existing Go health check libraries come with their own implementations of tool specific check functions 
 (such as for Redis, memcached, Postgres, etc.). Rather than reinventing the wheel and come up with yet another 
 library specific implementation of check functions, the goal was to design this library in a way that makes it possible
 to reuse existing solutions. The following (non-exhaustive) list of health check implementations 
