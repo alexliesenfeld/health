@@ -23,6 +23,8 @@
 
 ## Table of Contents
 
+<img align="right" height="330" src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-balloon.svg"/>
+
 1. [Features](#features)
 1. [Getting started](#getting-started)
 1. [Periodic Health Checks](#periodic-health-checks)
