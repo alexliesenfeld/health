@@ -129,8 +129,8 @@ shows **all features** of this library.
 
 With "synchronous" health checks we mean that every HTTP request initiates a health check and waits until all check
 functions complete before returning an aggregated health result. This approach is usually OK for smaller applications
-with a low number of quickly checkable dependencies. However, it will not scale well enough for more involved
-applications that either have many dependencies or slow check functions.
+with a low number of quickly checkable dependencies. However, it will not scale well for more involved applications 
+that either have many dependencies or slow check functions.
 
 Rather than executing health check functions on every HTTP request, periodic (or "asynchronous")
 health checks execute the check function on a fixed schedule. With this approach, the health status is always read from
