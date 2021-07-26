@@ -304,6 +304,6 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Pub
 
 ## Attribution
 
-(*) The image included at the top of this document was created by [Egon Elbre](https://github.com/egonelbre/gophers)
+The image included at the top of this document was created by [Egon Elbre](https://github.com/egonelbre/gophers)
 and is licensed under the [CC0 license](https://creativecommons.org/publicdomain/zero/1.0/). For more information,
 please head over to its [source repository](https://github.com/egonelbre/gophers).
