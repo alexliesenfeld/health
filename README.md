@@ -21,10 +21,9 @@
     <a href="https://github.com/alexliesenfeld/health/issues">Request Feature</a>
 </p>
 
+<img align="right" height="300" alt="The gopher image heart-balloon.svg was created by Egon Elbre, licensed under the CC0 license, see github.com/egonelbre/gophers for more information." title="The gopher image heart-balloon.svg was created by Egon Elbre, licensed under the CC0 license, see github.com/egonelbre/gophers for more information." src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-balloon.svg"/>
+
 ## Table of Contents
-
- <img align="right" height="330" src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-balloon.svg"/>
-
 1. [Features](#features)
 1. [Getting started](#getting-started)
 1. [Periodic Health Checks](#periodic-health-checks)
@@ -213,7 +212,7 @@ This library provides two mechanisms that allow you to hook into processing:
   | ----------------------- |:------------------------------------------------------------------------------------------------------------|
   | BasicAuth               | Reduces exposed health details based on authentication success. Uses [basic auth](https://en.wikipedia.org/wiki/Basic_access_authentication) for authentication.         |
   | CustomAuth              | Same as BasicAuth middleware, but allows using an arbitrary function for authentication.                    |
-  | FullDetailsOnQueryParam | Disables health details unless the request contained a previously configured query parameter name.          |
+  | FullDetailsOnQueryParam | Disables health details unless the request contains a previously configured query parameter name.          |
   | BasicLogger             | Basic request-oriented logging functionality.                                                               |
 
 * [Interceptors](https://pkg.go.dev/github.com/alexliesenfeld/health#InterceptorFunc) make it possible to intercept all
