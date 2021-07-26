@@ -21,8 +21,6 @@
     <a href="https://github.com/alexliesenfeld/health/issues">Request Feature</a>
 </p>
 
-<img align="right" height="300" alt="The gopher image heart-balloon.svg was created by Egon Elbre, licensed under the CC0 license, see github.com/egonelbre/gophers for more information." title="The gopher image heart-balloon.svg was created by Egon Elbre, licensed under the CC0 license, see github.com/egonelbre/gophers for more information." src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-balloon.svg"/>
-
 ## Table of Contents
 1. [Features](#features)
 1. [Getting started](#getting-started)
