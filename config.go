@@ -55,6 +55,7 @@ func NewChecker(options ...CheckerOption) Checker {
 		timeout:      30 * time.Second,
 		maxErrMsgLen: 500,
 		checks:       map[string]*Check{},
+		interceptors: []Interceptor{},
 	}
 
 	for _, opt := range options {
@@ -178,5 +179,14 @@ func WithPeriodicCheck(refreshPeriod time.Duration, initialDelay time.Duration, 
 		check.updateInterval = refreshPeriod
 		check.initialDelay = initialDelay
 		cfg.checks[check.Name] = &check
+	}
+}
+
+// WithInterceptors adds a list of interceptors that will be applied to every check function. Interceptors
+// may intercept the function call and do some pre- and post-processing, having the check state and check function
+// result at hand. The interceptors will be executed in the order they are passed to this function.
+func WithInterceptors(interceptors ...Interceptor) CheckerOption {
+	return func(cfg *checkerConfig) {
+		cfg.interceptors = interceptors
 	}
 }

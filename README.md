@@ -209,11 +209,12 @@ This library provides two mechanisms that allow you to hook into processing:
   [middleware pattern](https://drstearns.github.io/tutorials/gomiddleware/), this middleware allows you to access check
   related information and post-process a check result before sending it in an HTTP response.
 
-  | Middleware    | Description                                                                                                 |
-  | ------------- |:------------------------------------------------------------------------------------------------------------|
-  | BasicAuth     | Reduces exposed health details based on authentication success. Uses [basic auth](https://en.wikipedia.org/wiki/Basic_access_authentication) for authentication.         |
-  | CustomAuth    | Same as BasicAuth middleware, but allows using an arbitrary function for authentication. |
-  | BasicLogger   | Basic request-oriented logging functionality.                                                               |
+  | Middleware              | Description                                                                                                 |
+  | ----------------------- |:------------------------------------------------------------------------------------------------------------|
+  | BasicAuth               | Reduces exposed health details based on authentication success. Uses [basic auth](https://en.wikipedia.org/wiki/Basic_access_authentication) for authentication.         |
+  | CustomAuth              | Same as BasicAuth middleware, but allows using an arbitrary function for authentication.                    |
+  | FullDetailsOnQueryParam | Disables health details unless the request contained a previously configured query parameter name.          |
+  | BasicLogger             | Basic request-oriented logging functionality.                                                               |
 
 * [Interceptors](https://pkg.go.dev/github.com/alexliesenfeld/health#InterceptorFunc) make it possible to intercept all
   calls to a check function. This is useful if you have cross-functional code that needs to be reusable and should have

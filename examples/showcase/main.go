@@ -45,6 +45,10 @@ func main() {
 		// This listener will be called whenever system health status changes (e.g., from "up" to "down").
 		health.WithStatusListener(onSystemStatusChanged),
 
+		// A list of interceptors that will be applied to every check function. Interceptors may intercept the function
+		// call and do some pre- and post-processing, having the check state and check function result at hand.
+		health.WithInterceptors(interceptors.BasicLogger()),
+
 		// A simple successFunc to see if a fake database connection is up.
 		health.WithCheck(health.Check{
 			// Each check gets a unique name
@@ -57,7 +61,7 @@ func main() {
 			Timeout: 2 * time.Second,
 			// A status listener that will be called if status of this component changes.
 			StatusListener: onComponentStatusChanged,
-			// An interceptor pre- and post-processes each call to the check function
+			// A check specific interceptor that pre- and post-processes each call to the check function.
 			Interceptors: []health.Interceptor{interceptors.BasicLogger()},
 			// The check is allowed to fail up to 5 times in a row
 			// until considered unavailable.
@@ -77,7 +81,7 @@ func main() {
 			Timeout: 2 * time.Second,
 			// A status listener that will be called if status of this component changes.
 			StatusListener: onComponentStatusChanged,
-			// An interceptor pre- and post-processes each call to the check function
+			// A check specific interceptor that pre- and post-processes each call to the check function.
 			Interceptors: []health.Interceptor{interceptors.BasicLogger()},
 			// The check is allowed to fail up to 5 times in a row
 			// until considered unavailable.
@@ -102,8 +106,9 @@ func main() {
 
 		// A list of middlewares to pre- and post-process health check requests.
 		health.WithMiddleware(
-			middleware.BasicLogger(),                 // This middleware will log incoming requests
-			middleware.BasicAuth("user", "password"), // Removes check details based on basic auth
+			middleware.BasicLogger(),                   // This middleware will log incoming requests
+			middleware.BasicAuth("user", "password"),   // Removes check details based on basic auth
+			middleware.FullDetailsOnQueryParam("full"), // Disables health details unless contains has query param "full"
 		),
 
 		// Set a custom HTTP status code that should be used if the system is considered "up".

@@ -14,6 +14,7 @@ type (
 		maxErrMsgLen         uint
 		cacheTTL             time.Duration
 		statusChangeListener func(context.Context, CheckerState)
+		interceptors         []Interceptor
 		detailsDisabled      bool
 		autostartDisabled    bool
 	}
@@ -221,19 +222,19 @@ func (ck *defaultChecker) Check(ctx context.Context) CheckerResult {
 
 func (ck *defaultChecker) runSynchronousChecks(ctx context.Context) {
 	var (
-		numChecks          = len(ck.cfg.checks)
+		cfg                = ck.cfg
+		numChecks          = len(cfg.checks)
 		resChan            = make(chan checkResult, numChecks)
-		cacheTTL           = ck.cfg.cacheTTL
 		numInitiatedChecks = 0
 	)
 
-	for _, c := range ck.cfg.checks {
+	for _, c := range cfg.checks {
 		checkState := ck.state.CheckState[c.Name]
-		if !isPeriodicCheck(c) && isCacheExpired(cacheTTL, &checkState) {
+		if !isPeriodicCheck(c) && isCacheExpired(cfg.cacheTTL, &checkState) {
 			numInitiatedChecks++
 			go func(ctx context.Context, check Check, state CheckState) {
 				withCheckContext(ctx, &check, func(ctx context.Context) {
-					_, state = executeCheck(ctx, &check, state)
+					_, state = executeCheck(ctx, &cfg, &check, state)
 					resChan <- checkResult{check.Name, state}
 				})
 			}(ctx, *c, checkState)
@@ -259,14 +260,14 @@ func (ck *defaultChecker) startPeriodicChecks() {
 			endChan := make(chan *sync.WaitGroup, 1)
 			checkState := ck.state.CheckState[check.Name]
 			ck.endChans = append(ck.endChans, endChan)
-			go func(check Check, state CheckState) {
+			go func(check Check, cfg checkerConfig, state CheckState) {
 				if check.initialDelay > 0 {
 					time.Sleep(check.initialDelay)
 				}
 			loop:
 				for {
 					withCheckContext(context.Background(), &check, func(ctx context.Context) {
-						ctx, state = executeCheck(ctx, &check, state)
+						ctx, state = executeCheck(ctx, &cfg, &check, state)
 						ck.mtx.Lock()
 						ck.updateState(ctx, checkResult{check.Name, state})
 						ck.mtx.Unlock()
@@ -279,7 +280,7 @@ func (ck *defaultChecker) startPeriodicChecks() {
 				}
 				close(endChan)
 				wg.Done()
-			}(*check, checkState)
+			}(*check, ck.cfg, checkState)
 		}
 	}
 }
@@ -333,14 +334,20 @@ func withCheckContext(ctx context.Context, check *Check, f func(checkCtx context
 	f(ctx)
 }
 
-func executeCheck(ctx context.Context, check *Check, oldState CheckState) (context.Context, CheckState) {
+func executeCheck(
+	ctx context.Context,
+	cfg *checkerConfig,
+	check *Check,
+	oldState CheckState,
+) (context.Context, CheckState) {
 	state := oldState
 
 	if state.FirstCheckStartedAt.IsZero() {
 		state.FirstCheckStartedAt = time.Now().UTC()
 	}
 
-	state = withInterceptors(check.Interceptors, func(ctx context.Context, _ string, state CheckState) CheckState {
+	interceptors := append(cfg.interceptors, check.Interceptors...)
+	state = withInterceptors(interceptors, func(ctx context.Context, _ string, state CheckState) CheckState {
 		now := time.Now().UTC()
 		checkFuncResult := executeCheckFunc(ctx, check)
 		return createNextCheckState(now, checkFuncResult, check, state)
