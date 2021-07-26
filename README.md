@@ -323,8 +323,3 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Pub
 
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B26405%2Fgithub.com%2Falexliesenfeld%2Fhealth.svg?type=large)](https://app.fossa.com/projects/custom%2B26405%2Fgithub.com%2Falexliesenfeld%2Fhealth?ref=badge_large)
 
-## Attribution
-
-The image included at the top of this document was created by [Egon Elbre](https://github.com/egonelbre/gophers)
-and is licensed under the [CC0 license](https://creativecommons.org/publicdomain/zero/1.0/). For more information,
-please head over to its [source repository](https://github.com/egonelbre/gophers).
