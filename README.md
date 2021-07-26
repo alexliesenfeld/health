@@ -2,7 +2,10 @@
     <h1>Health</h1>
 </div>
 
-<p align="center">A simple and flexible health check library for Go.</p>
+<p align="center">
+A simple and flexible health check library for Go. It allows you to build health checks that do not simply return HTTP status code 200 but actually check if all
+necessary components are healthy.
+</p>
 <div align="center">
 
 [![Build](https://github.com/alexliesenfeld/health/actions/workflows/build.yml/badge.svg)](https://github.com/alexliesenfeld/health/actions/workflows/build.yml)
@@ -31,26 +34,6 @@
 1. [Listening to Status Changes](#listening-to-status-changes)
 1. [Compatibility With Other Libraries](#compatibility-with-other-libraries)
 1. [License](#license)
-
-## Features
-
-This library allows you to build health checks that do not simply return HTTP status code 200 but actually check if all
-necessary components are healthy.
-
-This library provides the following features:
-
-- Allows creating [request based](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCheck) ("synchronous") and
-  [periodic](https://pkg.go.dev/github.com/alexliesenfeld/health#WithPeriodicCheck) ("asynchronous") health checks.
-- Timeout management.
-- [Caching](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCacheDuration).
-- [Health status change listeners](https://pkg.go.dev/github.com/alexliesenfeld/health#WithStatusListener) and
-  [lifecycle hooks](https://github.com/alexliesenfeld/health#hooks).
-- [Failure tolerant checks](https://pkg.go.dev/github.com/alexliesenfeld/health#readme-failure-tolerance).
-- Provides an [http.Handler](https://golang.org/pkg/net/http/#Handler) and that is fully compatible with
-  [net/http](https://golang.org/pkg/net/http/#ServeMux).
-
-[This example](https://github.com/alexliesenfeld/health/blob/main/examples/showcase/main.go)
-shows **all features** of this library.
 
 ## Getting Started
 
@@ -138,6 +121,9 @@ would yield a response with HTTP status code `503 (Service Unavailable)`, and th
   }
 }
 ```
+
+[This example](https://github.com/alexliesenfeld/health/blob/main/examples/showcase/main.go)
+shows **all features** of this library.
 
 ## Periodic Health Checks
 
