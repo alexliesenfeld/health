@@ -99,9 +99,8 @@ func main() {
 		health.WithPeriodicCheck(15*time.Second, 3*time.Second, health.Check{
 			Name: "search",
 			// The check function checks the health of a component. If an error is
-			// returned, the component is considered unavailable ("down").
-			// The context contains a deadline according to the configuration of
-			// the Checker (global and .
+			// returned, the component is considered unavailable (or "down").
+			// The context contains a deadline according to the configured timeouts.
 			Check: func(ctx context.Context) error {
 				return fmt.Errorf("this makes the check fail")
 			},
