@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/alexliesenfeld/health"
-	log "github.com/sirupsen/logrus"
+	"log"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -56,11 +56,11 @@ func main() {
 }
 
 func onComponentStatusChanged(_ context.Context, name string, state health.CheckState) {
-	log.Infof("component %s changed status to %s", name, state.Status)
+	log.Println(fmt.Sprintf("component %s changed status to %s", name, state.Status))
 }
 
 func onSystemStatusChanged(_ context.Context, state health.CheckerState) {
-	log.Infof("system status changed to %s", state.Status)
+	log.Println(fmt.Sprintf("system status changed to %s", state.Status))
 }
 
 func volatileFunc() func(ctx context.Context) error {
