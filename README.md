@@ -194,7 +194,7 @@ This library provides two mechanisms that allow you to hook into processing:
 
   | Middleware    | Description                                                                                                 |
   | ------------- |:------------------------------------------------------------------------------------------------------------|
-  | BasicAuth     | Reduces exposed health details based on authentication success. Uses basic auth for authentication.         |
+  | BasicAuth     | Reduces exposed health details based on authentication success. Uses [basic auth](https://en.wikipedia.org/wiki/Basic_access_authentication) for authentication.         |
   | CustomAuth    | Same as BasicAuth middleware, but allows using an arbitrary function for authentication. |
   | BasicLogger   | Basic request-oriented logging functionality.                                                               |
 
