@@ -165,7 +165,7 @@ transition into a more scalable health check implementation later.
 Health check responses are cached to avoid sending too many request to the services that your program checks and to
 mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set to 1 second by
 default. If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()`
-configuration option.
+configuration option. 
 
 ## Failure Tolerance
 
@@ -306,7 +306,7 @@ without or minimal adjustments:
         URL: googleURL,
     })
     ...
-    // Add check to this libraries checker.
+    // Add the check in the Checker configuration.
     health.WithCheck(health.Check{
         Name: "google",
         Check: func(_ context.Context) error {

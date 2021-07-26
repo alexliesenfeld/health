@@ -25,7 +25,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	// Add check to this libraries checker.
+	// Add the check in the Checker configuration
 	http.Handle("/health", health.NewHandler(
 		health.NewChecker(
 			health.WithCheck(health.Check{
