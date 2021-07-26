@@ -16,7 +16,7 @@ import (
 // real-world health check implementation would look like but merely to give you an idea of what you can
 // achieve with it.
 func main() {
-	// Create a new Checker
+	// Create a new Checker.
 	checker := health.NewChecker(
 
 		// Configure a global timeout that will be applied to all checks.
@@ -26,7 +26,7 @@ func main() {
 		health.WithDisabledCache(),
 		health.WithCacheDuration(2*time.Second),
 
-		// Cut error message length
+		// Cut error message length.
 		health.WithMaxErrorMessageLength(500),
 
 		// Configure a global timeout that will be applied to all checks.
@@ -51,11 +51,11 @@ func main() {
 
 		// A simple successFunc to see if a fake database connection is up.
 		health.WithCheck(health.Check{
-			// Each check gets a unique name
+			// Each check gets a unique name.
 			Name: "database",
 			// The check function. Return an error if the service is unavailable.
 			Check: func(ctx context.Context) error {
-				return nil // no error
+				return nil // no error.
 			},
 			// A successFunc specific timeout.
 			Timeout: 2 * time.Second,
@@ -73,7 +73,7 @@ func main() {
 
 		// The following check will be executed periodically every 10 seconds with an initial delay of 3 seconds.
 		health.WithPeriodicCheck(10*time.Second, 3*time.Second, health.Check{
-			// Each check gets a unique name
+			// Each check gets a unique name.
 			Name: "search-engine",
 			// The check function. Return an error if the service is unavailable.
 			Check: volatileFunc(),
@@ -106,9 +106,9 @@ func main() {
 
 		// A list of middlewares to pre- and post-process health check requests.
 		health.WithMiddleware(
-			middleware.BasicLogger(),                   // This middleware will log incoming requests
-			middleware.BasicAuth("user", "password"),   // Removes check details based on basic auth
-			middleware.FullDetailsOnQueryParam("full"), // Disables health details unless contains has query param "full"
+			middleware.BasicLogger(),                   // This middleware will log incoming requests.
+			middleware.BasicAuth("user", "password"),   // Removes check details based on basic auth.
+			middleware.FullDetailsOnQueryParam("full"), // Disables health details unless request contains query param "full".
 		),
 
 		// Set a custom HTTP status code that should be used if the system is considered "up".
