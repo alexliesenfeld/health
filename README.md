@@ -21,9 +21,9 @@
     <a href="https://github.com/alexliesenfeld/health/issues">Request Feature</a>
 </p>
 
-## Table of Contents
-
  <img align="right" height="330" src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-balloon.svg"/>
+ 
+## Table of Contents
 
 1. [Features](#features)
 1. [Getting started](#getting-started)
