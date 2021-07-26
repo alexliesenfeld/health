@@ -25,10 +25,12 @@
 
 <img align="right" height="330" src="https://raw.githubusercontent.com/egonelbre/gophers/master/vector/friends/heart-balloon.svg"/>
 
+
 1. [Features](#features)
 1. [Getting started](#getting-started)
 1. [Periodic Health Checks](#periodic-health-checks)
-1. [Failure Tolerance](#caching)
+1. [Caching](#caching)   
+1. [Failure Tolerance](#failure-tolerance)
 1. [Middleware and Interceptors](#middleware-and-interceptors)
 1. [Listening to Status Changes](#listening-to-status-changes)
 1. [Compatibility With Other Libraries](#compatibility-with-other-libraries)
@@ -44,7 +46,7 @@ This library provides the following features:
 - Allows creating [request based](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCheck) ("synchronous") and 
   [periodic](https://pkg.go.dev/github.com/alexliesenfeld/health#WithPeriodicCheck) ("asynchronous") health checks.
 - Timeout management.
-- [Caching](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCacheDuration)
+- [Caching](https://pkg.go.dev/github.com/alexliesenfeld/health#WithCacheDuration).
 - [Health status change listeners](https://pkg.go.dev/github.com/alexliesenfeld/health#WithStatusListener) and 
   [lifecycle hooks](https://github.com/alexliesenfeld/health#hooks).
 - [Failure tolerant checks](https://pkg.go.dev/github.com/alexliesenfeld/health#readme-failure-tolerance).
@@ -299,3 +301,9 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Public License for more details.
 
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B26405%2Fgithub.com%2Falexliesenfeld%2Fhealth.svg?type=large)](https://app.fossa.com/projects/custom%2B26405%2Fgithub.com%2Falexliesenfeld%2Fhealth?ref=badge_large)
+
+## Attribution
+
+(*) The image included at the top of this document was created by [Egon Elbre](https://github.com/egonelbre/gophers)
+and is licensed under the [CC0 license](https://creativecommons.org/publicdomain/zero/1.0/). For more information,
+please head over to its [source repository](https://github.com/egonelbre/gophers).
