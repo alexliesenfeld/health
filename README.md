@@ -165,7 +165,7 @@ status changes, or that of a specific component.
 ### Example
 
 ```go
-health.WithPeriodicCheck(5*time.Second, health.Check{
+health.WithPeriodicCheck(5*time.Second, 0, health.Check{
     Name:   "search",
     Check:  myCheckFunc,
     StatusListener: func (ctx context.Context, name string, state CheckState) ) {
