@@ -35,6 +35,15 @@ necessary components are healthy.
 
 ## Getting Started
 
+This library provides a [http.Handler](https://pkg.go.dev/net/http#Handler) that acts as a health endpoint. It can be 
+used by [cloud infrastructure](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) 
+or other services to determine the availability of an application.
+
+Rather than simply returning a response with HTTP status code 200, this library allows building health checks 
+that test the availability of all required dependencies. The HTTP response contains the aggregated health result and 
+details about the health status of each component.
+
+### Example
 ```go
 package main
 
