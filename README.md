@@ -26,7 +26,7 @@ necessary components are healthy.
 
 ## Table of Contents
 1. [Getting started](#getting-started)
-1. [Synchronous and Asynchronous Checks](#synchronous-and-asynchronous-checks)
+1. [Synchronous vs. Asynchronous Checks](#synchronous-and-asynchronous-checks)
 1. [Caching](#caching)
 1. [Middleware and Interceptors](#middleware-and-interceptors)
 1. [Listening to Status Changes](#listening-to-status-changes)
@@ -123,7 +123,7 @@ would yield a response with HTTP status code `503 (Service Unavailable)`, and th
 [This example](https://github.com/alexliesenfeld/health/blob/main/examples/showcase/main.go)
 shows **all features** of this library.
 
-## Synchronous and Asynchronous Checks
+## Synchronous vs. Asynchronous Checks
 
 With "synchronous" health checks we mean that every HTTP request initiates a health check and waits until all check
 functions complete before returning an aggregated health result. You can configure synchronous checks
