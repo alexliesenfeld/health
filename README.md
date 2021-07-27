@@ -26,7 +26,7 @@ necessary components are healthy.
 
 ## Table of Contents
 1. [Getting started](#getting-started)
-1. [Synchronous vs. Asynchronous Checks](#synchronous-and-asynchronous-checks)
+1. [Synchronous vs. Asynchronous Checks](#synchronous-vs-asynchronous-checks)
 1. [Caching](#caching)
 1. [Listening to Status Changes](#listening-to-status-changes)
 1. [Middleware and Interceptors](#middleware-and-interceptors)
