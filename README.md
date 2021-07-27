@@ -25,7 +25,6 @@ necessary components are healthy.
 </p>
 
 ## Table of Contents
-1. [Features](#features)
 1. [Getting started](#getting-started)
 1. [Synchronous and Asynchronous Checks](#synchronous-and-asynchronous-checks)
 1. [Caching](#caching)
@@ -128,9 +127,15 @@ shows **all features** of this library.
 ## Synchronous and Asynchronous Checks
 
 With "synchronous" health checks we mean that every HTTP request initiates a health check and waits until all check
-functions complete before returning an aggregated health result. This approach is usually OK for smaller applications
-with a low number of quickly checkable dependencies. However, it will not scale well for more involved applications 
-that either have many dependencies or slow check functions.
+functions complete before returning an aggregated health result. You can configure synchronous checks
+using the `WithCheck` configuration option (see [example above](#getting-started)).
+
+Synchronous checks can be sufficient for smaller applications but might not scale well for more involved applications. 
+Sometimes an application needs to read a large amount of data, can experience latency issues or make an expensive 
+calculation to tell something about its health. With synchronous health checks the application will not be able 
+to respond quickly to health check requests
+(see [here](https://loft.sh/blog/kubernetes-readiness-probes-examples-common-pitfalls/) 
+why this is necessary to avoid service disruptions in modern cloud infrastructure).
 
 Rather than executing health check functions on every HTTP request, periodic (or "asynchronous")
 health checks execute the check function on a fixed schedule. With this approach, the health status is always read from
@@ -141,38 +146,35 @@ Periodic checks can be configured using the `WithPeriodicCheck` configuration op
 (see [example above](#getting-started)).
 
 **This library allows you to mix synchronous and asynchronous check functions**, so you can start out simple and easily
-transition into a more scalable health check implementation later.
+transition into a more scalable and robust health check implementation later.
 
 ## Caching
 
 Health check responses are cached to avoid sending too many request to the services that your program checks and to
 mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set to 1 second by
 default. If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()`
-configuration option. 
+configuration option. Even if your health endpoint is not exposed to other services, you should still think about 
+guarding your dependencies by using a cache. 
 
 ## Failure Tolerance
 
-This library lets you configure failure tolerant checks that allow some degree of failure. The check is only considered
-failed, when predefined tolerance thresholds are crossed.
+Let's assume that your app provides a REST API but also consumes messages from a message queue. If the connection to 
+the message queue it is down, your app can still serve API requests, but it will not process any messages during 
+this time. There is no reason your app is "unhealthy" just yet. However, if the message queue is down for too long, 
+there may indeed be a problem that requires attention. In this case, you still might want to flag your app unhealthy 
+by returning a failing health check, so it can be automatically restarted by your infrastructure (refer 
+to [this blog post](https://cloud.google.com/blog/products/containers-kubernetes/kubernetes-best-practices-setting-up-health-checks-with-readiness-and-liveness-probes) 
+to see how it can be used for Kubernetes liveness probes).
 
-### Example
-
-Let's assume that your app provides a REST API but also consumes messages from a Kafka topic. If the connection to Kafka
-is down, your app can still serve API requests, but it will not process any messages during this time. If the Kafka
-health check is configured without any failure tolerance, your whole application will become unhealthy. This is most
-likely not what you want. However, if Kafka is down for too long, there may indeed be a problem that requires attention.
-In this case, you still may want to flag your app unhealthy by returning a failing health check, so that it can be
-automatically restarted by your infrastructure.
-
-Failure tolerant health checks let you configure this kind of behaviour.
+To achieve this kind of behaviour, you can configure checks to accept a limited amount of failure:
 
 ```go
 health.WithCheck(health.Check{
     Name:    "unreliable-service",
-    // Check is allowed to fail up to 4 times until considered unavailable
-    MaxContiguousFails: 4,
-    // Check is allowed to be in an erroneous state for up to 1 minute until considered unavailable.
-    MaxTimeInError:     1 * time.Minute,
+    // Check is allowed to fail up to 10 times until considered unavailable
+    MaxContiguousFails: 10,
+    // Check is allowed to be in an erroneous state for up to 30 minute until considered unavailable.
+    MaxTimeInError:     30 * time.Minute,
     Check: myCheckFunc,
 }),
 ```
