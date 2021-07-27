@@ -28,8 +28,8 @@ necessary components are healthy.
 1. [Getting started](#getting-started)
 1. [Synchronous vs. Asynchronous Checks](#synchronous-and-asynchronous-checks)
 1. [Caching](#caching)
-1. [Middleware and Interceptors](#middleware-and-interceptors)
 1. [Listening to Status Changes](#listening-to-status-changes)
+1. [Middleware and Interceptors](#middleware-and-interceptors)
 1. [Compatibility With Other Libraries](#compatibility-with-other-libraries)
 1. [License](#license)
 
@@ -152,38 +152,7 @@ transition into a more scalable and robust health check implementation later.
 Health check responses are cached to avoid sending too many request to the services that your program checks and to
 mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set to 1 second by
 default. If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()`
-configuration option. Even if your health endpoint is not exposed to other services, you should still think about 
-guarding your dependencies by using a cache.
-
-## Middleware and Interceptors
-
-It can be useful to hook into the checking lifecycle to do some processing before and after a health check. For example,
-you might want to add some tracing information to the [Context](https://pkg.go.dev/context#Context) before the check
-function executes, do some logging or modify the check result before sending the HTTP response
-(e.g., removing details on failed authentication).
-
-This library provides two mechanisms that allow you to hook into processing:
-
-* [Middleware](https://pkg.go.dev/github.com/alexliesenfeld/health#MiddlewareFunc) gives you the possibility to
-  intercept all calls of [Checker.Check](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker), which corresponds
-  to every incoming HTTP request. In contrary to the usually used
-  [middleware pattern](https://drstearns.github.io/tutorials/gomiddleware/), this middleware allows you to access check
-  related information and post-process a check result before sending it in an HTTP response.
-
-  | Middleware              | Description                                                                                                 |
-  | ----------------------- |:------------------------------------------------------------------------------------------------------------|
-  | [BasicAuth](https://pkg.go.dev/github.com/alexliesenfeld/health/middleware#BasicAuth)               | Reduces exposed health details based on authentication success. Uses [basic auth](https://en.wikipedia.org/wiki/Basic_access_authentication) for authentication.         |
-  | [CustomAuth](https://pkg.go.dev/github.com/alexliesenfeld/health/middleware#BasicAuth)              | Same as BasicAuth middleware, but allows using an arbitrary function for authentication.                    |
-  | [FullDetailsOnQueryParam](https://pkg.go.dev/github.com/alexliesenfeld/health/middleware#FullDetailsOnQueryParam) | Disables health details unless the request contains a previously configured query parameter name.          |
-  | [BasicLogger](https://pkg.go.dev/github.com/alexliesenfeld/health/middleware#BasicLogger)             | Basic request-oriented logging functionality.                                                               |
-
-* [Interceptors](https://pkg.go.dev/github.com/alexliesenfeld/health#InterceptorFunc) make it possible to intercept all
-  calls to a check function. This is useful if you have cross-functional code that needs to be reusable and should have
-  access to check state information.
-
-  | Interceptor   | Description                                            |
-  | ------------- |:-------------------------------------------------------|
-  | [BasicLogger](https://pkg.go.dev/github.com/alexliesenfeld/health/interceptors#BasicLogger)   | Basic component check function logging functionality   |
+configuration option.
 
 ## Listening to Status Changes
 
@@ -208,6 +177,36 @@ health.WithStatusListener(func (ctx context.Context, state CheckerState)) {
     log.Printf("overall system health status changed to %s", state.Status)
 }),
 ```
+
+## Middleware and Interceptors
+
+It can be useful to hook into the checking lifecycle to do some processing before and after a health check. For example,
+you might want to add some tracing information to the [Context](https://pkg.go.dev/context#Context) before the check
+function executes, do some logging or modify the check result before sending the HTTP response
+(e.g., removing details on failed authentication).
+
+This library provides two mechanisms that allow you to hook into processing:
+
+* [Middleware](https://pkg.go.dev/github.com/alexliesenfeld/health#MiddlewareFunc) gives you the possibility to
+  intercept all calls of [Checker.Check](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker), which corresponds
+  to every incoming HTTP request. In contrary to the usually used
+  [middleware pattern](https://drstearns.github.io/tutorials/gomiddleware/), this middleware allows you to access check
+  related information and post-process a check result before sending it in an HTTP response.
+
+  | Middleware              | Description                                                                                                 |
+    | ----------------------- |:------------------------------------------------------------------------------------------------------------|
+  | [BasicAuth](https://pkg.go.dev/github.com/alexliesenfeld/health/middleware#BasicAuth)               | Reduces exposed health details based on authentication success. Uses [basic auth](https://en.wikipedia.org/wiki/Basic_access_authentication) for authentication.         |
+  | [CustomAuth](https://pkg.go.dev/github.com/alexliesenfeld/health/middleware#BasicAuth)              | Same as BasicAuth middleware, but allows using an arbitrary function for authentication.                    |
+  | [FullDetailsOnQueryParam](https://pkg.go.dev/github.com/alexliesenfeld/health/middleware#FullDetailsOnQueryParam) | Disables health details unless the request contains a previously configured query parameter name.          |
+  | [BasicLogger](https://pkg.go.dev/github.com/alexliesenfeld/health/middleware#BasicLogger)             | Basic request-oriented logging functionality.                                                               |
+
+* [Interceptors](https://pkg.go.dev/github.com/alexliesenfeld/health#InterceptorFunc) make it possible to intercept all
+  calls to a check function. This is useful if you have cross-functional code that needs to be reusable and should have
+  access to check state information.
+
+  | Interceptor   | Description                                            |
+    | ------------- |:-------------------------------------------------------|
+  | [BasicLogger](https://pkg.go.dev/github.com/alexliesenfeld/health/interceptors#BasicLogger)   | Basic component check function logging functionality   |
 
 ## Compatibility With Other Libraries
 
