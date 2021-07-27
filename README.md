@@ -157,15 +157,16 @@ transition into a more scalable and robust health check implementation later.
 
 ## Caching
 
-Health check responses are cached to avoid sending too many request to the services that your program checks and to
+Health check results are cached to avoid sending too many request to the services that your program checks and to
 mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set to 1 second by
 default. If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()`
 configuration option.
 
 ## Listening to Status Changes
 
-It can be useful to react to health status changes. For example, you might want to log status changes, so you can easier
-correlate logs during root cause analysis or perform actions to mitigate the impact of an unhealthy component.
+It can be useful to react to health status changes. For example, you might want to log status changes or adjust some
+metrics, so you can easier correlate logs during root cause analysis or perform actions to mitigate the impact 
+of an unhealthy component.
 
 This library allows you to configure listener functions that will be called when either the overall/aggregated health
 status changes, or that of a specific component.
