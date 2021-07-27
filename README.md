@@ -153,7 +153,7 @@ Health check responses are cached to avoid sending too many request to the servi
 mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Time_to_live) is set to 1 second by
 default. If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()`
 configuration option. Even if your health endpoint is not exposed to other services, you should still think about 
-guarding your dependencies by using a cache. 
+guarding your dependencies by using a cache.
 
 ## Middleware and Interceptors
 
