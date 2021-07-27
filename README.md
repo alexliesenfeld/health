@@ -3,8 +3,7 @@
 </div>
 
 <p align="center">
-A simple and flexible health check library for Go. It allows you to build health checks that do not simply return HTTP status code 200 but actually check if all
-necessary components are healthy.
+A simple and flexible health check library for Go.
 </p>
 <div align="center">
 
