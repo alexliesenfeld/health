@@ -28,7 +28,6 @@ necessary components are healthy.
 1. [Getting started](#getting-started)
 1. [Synchronous and Asynchronous Checks](#synchronous-and-asynchronous-checks)
 1. [Caching](#caching)
-1. [Failure Tolerance](#failure-tolerance)
 1. [Middleware and Interceptors](#middleware-and-interceptors)
 1. [Listening to Status Changes](#listening-to-status-changes)
 1. [Compatibility With Other Libraries](#compatibility-with-other-libraries)
@@ -155,29 +154,6 @@ mitigate "denial of service" attacks. The [TTL](https://en.wikipedia.org/wiki/Ti
 default. If you do not want to use caching altogether, you can disable it using the `health.WithDisabledCache()`
 configuration option. Even if your health endpoint is not exposed to other services, you should still think about 
 guarding your dependencies by using a cache. 
-
-## Failure Tolerance
-
-Let's assume that your app provides a REST API but also consumes messages from a message queue. If the connection to 
-the message queue it is down, your app can still serve API requests, but it will not process any messages during 
-this time. There is no reason your app is "unhealthy" just yet. However, if the message queue is down for too long, 
-there may indeed be a problem that requires attention. In this case, you still might want to flag your app unhealthy 
-by returning a failing health check, so it can be automatically restarted by your infrastructure (refer 
-to [this blog post](https://cloud.google.com/blog/products/containers-kubernetes/kubernetes-best-practices-setting-up-health-checks-with-readiness-and-liveness-probes) 
-to see how it can be used for Kubernetes liveness probes).
-
-To achieve this kind of behaviour, you can configure checks to accept a limited amount of failure:
-
-```go
-health.WithCheck(health.Check{
-    Name:    "unreliable-service",
-    // Check is allowed to fail up to 10 times until considered unavailable
-    MaxContiguousFails: 10,
-    // Check is allowed to be in an erroneous state for up to 30 minute until considered unavailable.
-    MaxTimeInError:     30 * time.Minute,
-    Check: myCheckFunc,
-}),
-```
 
 ## Middleware and Interceptors
 
