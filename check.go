@@ -281,16 +281,6 @@ func (ck *defaultChecker) startPeriodicChecks() {
 	}
 }
 
-func waitForStopSignal(waitTime time.Duration, interruptChannel <-chan *sync.WaitGroup) bool {
-	select {
-	case <-time.After(waitTime):
-		return false
-	case wg := <-interruptChannel:
-		wg.Done()
-		return true
-	}
-}
-
 func (ck *defaultChecker) updateState(ctx context.Context, updates ...checkResult) {
 	for _, update := range updates {
 		ck.state.CheckState[update.checkName] = update.newState
@@ -329,6 +319,16 @@ func isCacheExpired(cacheDuration time.Duration, state *CheckState) bool {
 
 func isPeriodicCheck(check *Check) bool {
 	return check.updateInterval > 0
+}
+
+func waitForStopSignal(waitTime time.Duration, interruptChannel <-chan *sync.WaitGroup) bool {
+	select {
+	case <-time.After(waitTime):
+		return false
+	case wg := <-interruptChannel:
+		wg.Done()
+		return true
+	}
 }
 
 func withCheckContext(ctx context.Context, check *Check, f func(checkCtx context.Context)) {
