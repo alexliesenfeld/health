@@ -48,7 +48,10 @@ type (
 )
 
 // NewChecker creates a new Checker. The provided options will be
-// used to modify its configuration.
+// used to modify its configuration. If the Checker was not yet started
+// (see Checker.IsStarted), it will be started automatically
+// (see Checker.Start). You can disable this autostart by
+// adding the WithDisabledAutostart configuration option.
 func NewChecker(options ...CheckerOption) Checker {
 	cfg := checkerConfig{
 		cacheTTL:     1 * time.Second,

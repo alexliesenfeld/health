@@ -58,10 +58,6 @@ func NewJSONResultWriter() *JSONResultWriter {
 }
 
 // NewHandler creates a new health check http.Handler.
-// If the Checker was not yet started (see Checker.IsStarted),
-// it will be started automatically (see Checker.Start).
-// You can disable this autostart by adding the WithDisabledAutostart
-// configuration option.
 func NewHandler(checker Checker, options ...HandlerOption) http.HandlerFunc {
 	cfg := createConfig(options)
 	return func(w http.ResponseWriter, r *http.Request) {
