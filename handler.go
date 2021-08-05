@@ -34,6 +34,9 @@ type (
 		// Write writes a CheckerResult into a http.ResponseWriter in a format
 		// that the ResultWriter supports (such as XML, JSON, etc.).
 		Write(result *CheckerResult, w http.ResponseWriter, r *http.Request) error
+
+		// SetContentType sets the Content-Type header
+		SetContentType(result *CheckerResult, w http.ResponseWriter, r *http.Request) error
 	}
 
 	// JSONResultWriter writes a CheckerResult in JSON format into an
@@ -47,8 +50,12 @@ func (r *JSONResultWriter) Write(result *CheckerResult, w http.ResponseWriter, r
 	if err != nil {
 		return fmt.Errorf("cannot marshal response: %w", err)
 	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Write(jsonResp)
+	return nil
+}
+
+func (r *JSONResultWriter) SetContentType(result *CheckerResult, w http.ResponseWriter, req *http.Request) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	return nil
 }
 
@@ -72,6 +79,7 @@ func NewHandler(checker Checker, options ...HandlerOption) http.HandlerFunc {
 
 		// Write HTTP response
 		disableResponseCache(w)
+		cfg.resultWriter.SetContentType(&result, w, r)
 		w.WriteHeader(mapHTTPStatus(result.Status, cfg.statusCodeUp, cfg.statusCodeDown))
 		cfg.resultWriter.Write(&result, w, r)
 	}
