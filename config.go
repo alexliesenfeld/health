@@ -28,6 +28,10 @@ type (
 		// check fails until the service is considered down/unavailable.
 		MaxContiguousFails uint // Optional
 
+		// Ignore will ignore the result/failure of this check when determining the
+		// aggregate final status.
+		Ignore bool // Optional
+
 		// StatusListener allows to set a listener that will be called
 		// whenever the AvailabilityStatus (e.g. from "up" to "down").
 		StatusListener func(ctx context.Context, name string, state CheckState) // Optional
