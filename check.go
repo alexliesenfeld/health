@@ -75,6 +75,10 @@ type (
 		FirstCheckStartedAt time.Time
 		// ContiguousFails holds the number of how often the check failed in a row.
 		ContiguousFails uint
+		// Ignore will ignore the result/failure of this check when determining the
+		// aggregate final status.
+		Ignore bool
+
 		// Result holds the error of the last check (nil if successful).
 		Result error
 		// The current availability status of the check.
@@ -146,7 +150,7 @@ func (s AvailabilityStatus) criticality() int {
 func newDefaultChecker(cfg checkerConfig) *defaultChecker {
 	checkState := map[string]CheckState{}
 	for _, check := range cfg.checks {
-		checkState[check.Name] = CheckState{Status: StatusUnknown}
+		checkState[check.Name] = CheckState{Status: StatusUnknown, Ignore: check.Ignore}
 	}
 
 	checker := defaultChecker{
@@ -423,6 +427,9 @@ func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFai
 func aggregateStatus(results map[string]CheckState) AvailabilityStatus {
 	status := StatusUp
 	for _, result := range results {
+		if result.Ignore {
+			continue
+		}
 		if result.Status.criticality() > status.criticality() {
 			status = result.Status
 		}
