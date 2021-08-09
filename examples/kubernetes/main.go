@@ -11,19 +11,22 @@ import (
 	"time"
 )
 
-// This is a an example configuration for Kubernetes liveness and readiness checks.
-// Please note that Kubernetes readiness and especially liveness checks need to be designed
-// with care to not cause any unintended behaviour (such as unexpected pod restarts, cascading failures, etc.).
-// Please refer to the following articles for guidance:
+// This is a an example configuration for Kubernetes liveness and readiness checks (for more info, please refer to
+// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
+// Please note that Kubernetes readiness and especially liveness checks need to be designed with care to not cause
+// any unintended behaviour (such as unexpected pod restarts, cascading failures, etc.). Please refer to the following
+// articles for guidance:
 // - https://www.innoq.com/en/blog/kubernetes-probes/
 // - https://blog.colinbreck.com/kubernetes-liveness-and-readiness-probes-how-to-avoid-shooting-yourself-in-the-foot/
 // - https://srcco.de/posts/kubernetes-liveness-probes-are-dangerous.html
+// Attention: Please see file `example-pod-config.yaml` in the same directory for an example configuration
+// that you can use to complement this check implementation example.
 func main() {
 	db, _ := sql.Open("sqlite3", "simple.sqlite")
 	defer db.Close()
 
 	// Create a new Checker for our readiness check.
-	readinessCheck := health.NewChecker(
+	readinessChecker := health.NewChecker(
 
 		// Configure a global timeout that will be applied to all check functions.
 		health.WithTimeout(10*time.Second),
@@ -54,22 +57,24 @@ func main() {
 		}),
 
 		// Set a status listener that will be invoked when the health status changes.
-		// More powerful hooks are also available (see docs).
+		// More powerful hooks are also available (see docs). For guidance, please refer to the links
+		// listed in the main function documentation above.
 		health.WithStatusListener(func(ctx context.Context, state health.CheckerState) {
 			log.Println(fmt.Sprintf("health status changed to %s", state.Status))
 		}),
 	)
 
-	// Liveness check should only contain checks that identify if the service is locked up and cannot
-	// recover (deadlocks, etc.). It should just respond with 200 OK in most cases.
-	// Reason:
-	livenessCheck := health.NewChecker()
+	// Liveness check should mostly contain checks that identify if the service is locked up or in a state that it
+	// cannot recover from (deadlocks, etc.). In most cases it should just respond with 200 OK to avoid unexpected
+	// restarts.
+	livenessChecker := health.NewChecker()
 
 	// Create a new health check http.Handler that returns the health status
 	// serialized as a JSON string. You can pass pass further configuration
 	// options to NewHandler to modify default configuration.
-	http.Handle("/live", health.NewHandler(livenessCheck))
-	http.Handle("/ready", health.NewHandler(readinessCheck))
+	http.Handle("/live", health.NewHandler(livenessChecker))
+	http.Handle("/ready", health.NewHandler(readinessChecker))
 
+	// Start the HTTP server
 	log.Fatalln(http.ListenAndServe(":3000", nil))
 }
