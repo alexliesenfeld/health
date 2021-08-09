@@ -5,7 +5,7 @@
   ordering constraints when writing into a [http.ResponseWriter](https://pkg.go.dev/net/http#ResponseWriter) 
   (see https://github.com/alexliesenfeld/health/issues/9).
   
-### Bugfixes:
+### Improvements:
 - [Stopping the Checker](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker) does not wait 
   [initial delay of periodic checks](https://pkg.go.dev/github.com/alexliesenfeld/health#WithPeriodicCheck)
   has passed anymore. [Checker.Stop](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker) stops
@@ -14,6 +14,7 @@
 - The [health check http.Handler](https://pkg.go.dev/github.com/alexliesenfeld/health#NewHandler) was patched to not 
   include an empty `checks` map in the JSON response. In case no check functions are defined, the JSON response will 
   therefore not be `{ "status": "up", "checks" : {} }` anymore but only `{ "status": "up" }`. 
+- A Kubernetes liveness and readiness checks example was added (see `examples/kubernetes`).
 
 ## 0.5.1
 - Many documentation improvements
