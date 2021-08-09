@@ -1,3 +1,20 @@
+## 0.6.0 
+### Breaking Changes
+- A [ResultWriter](https://pkg.go.dev/github.com/alexliesenfeld/health#ResultWriter) must now additionally write the 
+  status code into the [http.ResponseWriter](https://pkg.go.dev/net/http#ResponseWriter). This is necessary due to 
+  ordering constraints when writing into a [http.ResponseWriter](https://pkg.go.dev/net/http#ResponseWriter) 
+  (see https://github.com/alexliesenfeld/health/issues/9).
+  
+### Improvements:
+- [Stopping the Checker](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker) does not wait 
+  [initial delay of periodic checks](https://pkg.go.dev/github.com/alexliesenfeld/health#WithPeriodicCheck)
+  has passed anymore. [Checker.Stop](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker) stops
+  the [Checker](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker) immediately, but waits until all currently 
+  running check functions have completed.
+
+## 0.5.1
+- Many documentation improvements
+
 ## 0.5.0
 
 - BREAKING CHANGE: Changed function signature of middleware functions.
