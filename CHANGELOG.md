@@ -5,8 +5,8 @@
   ordering constraints when writing into a [http.ResponseWriter](https://pkg.go.dev/net/http#ResponseWriter) 
   (see https://github.com/alexliesenfeld/health/issues/9).
   
-### Improvements:
-- [Stopping the Checker](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker) does not wait 
+### Improvements
+- [Stopping the Checker](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker) does not wait until the 
   [initial delay of periodic checks](https://pkg.go.dev/github.com/alexliesenfeld/health#WithPeriodicCheck)
   has passed anymore. [Checker.Stop](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker) stops
   the [Checker](https://pkg.go.dev/github.com/alexliesenfeld/health#Checker) immediately, but waits until all currently 
