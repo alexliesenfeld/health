@@ -1,0 +1,22 @@
+# This file contains a Kubernetes pod configuration example with a readiness and liveliness check.
+# It can be used to complement the health check implementation from file "main.go" in the same directory.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kubernetes-checks-example
+spec:
+  containers:
+    - name: my-app
+      image: my-app-registry/my-app-image
+
+      livenessProbe:
+        httpGet:
+          path: /live
+          port: 3000
+        periodSeconds: 3
+
+      readinessProbe:
+        httpGet:
+          path: /ready
+          port: 3000
+        periodSeconds: 3

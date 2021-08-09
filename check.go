@@ -256,15 +256,15 @@ func (ck *defaultChecker) startPeriodicChecks() {
 	// Start periodic checks
 	for _, check := range ck.cfg.checks {
 		if isPeriodicCheck(check) {
-			var wg *sync.WaitGroup
 			endChan := make(chan *sync.WaitGroup, 1)
-			checkState := ck.state.CheckState[check.Name]
 			ck.endChans = append(ck.endChans, endChan)
 			go func(check Check, cfg checkerConfig, state CheckState) {
+				defer close(endChan)
 				if check.initialDelay > 0 {
-					time.Sleep(check.initialDelay)
+					if waitForStopSignal(check.initialDelay, endChan) {
+						return
+					}
 				}
-			loop:
 				for {
 					withCheckContext(context.Background(), &check, func(ctx context.Context) {
 						ctx, state = executeCheck(ctx, &cfg, &check, state)
@@ -272,15 +272,11 @@ func (ck *defaultChecker) startPeriodicChecks() {
 						ck.updateState(ctx, checkResult{check.Name, state})
 						ck.mtx.Unlock()
 					})
-					select {
-					case <-time.After(check.updateInterval):
-					case wg = <-endChan:
-						break loop
+					if waitForStopSignal(check.updateInterval, endChan) {
+						return
 					}
 				}
-				close(endChan)
-				wg.Done()
-			}(*check, ck.cfg, checkState)
+			}(*check, ck.cfg, ck.state.CheckState[check.Name])
 		}
 	}
 }
@@ -302,7 +298,7 @@ func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 	var status = ck.state.Status
 	var checkResults *map[string]CheckResult
 
-	if !ck.cfg.detailsDisabled {
+	if len(ck.cfg.checks) > 0 && !ck.cfg.detailsDisabled {
 		checkResults = &map[string]CheckResult{}
 		for _, c := range ck.cfg.checks {
 			checkState := ck.state.CheckState[c.Name]
@@ -323,6 +319,16 @@ func isCacheExpired(cacheDuration time.Duration, state *CheckState) bool {
 
 func isPeriodicCheck(check *Check) bool {
 	return check.updateInterval > 0
+}
+
+func waitForStopSignal(waitTime time.Duration, interruptChannel <-chan *sync.WaitGroup) bool {
+	select {
+	case <-time.After(waitTime):
+		return false
+	case wg := <-interruptChannel:
+		wg.Done()
+		return true
+	}
 }
 
 func withCheckContext(ctx context.Context, check *Check, f func(checkCtx context.Context)) {

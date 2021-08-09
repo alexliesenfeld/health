@@ -33,7 +33,12 @@ type (
 	ResultWriter interface {
 		// Write writes a CheckerResult into a http.ResponseWriter in a format
 		// that the ResultWriter supports (such as XML, JSON, etc.).
-		Write(result *CheckerResult, w http.ResponseWriter, r *http.Request) error
+		// A ResultWriter is expected to write at least the following information into the http.ResponseWriter:
+		// (1) A MIME type header (e.g., "Content-Type" : "application/json"),
+		// (2) the HTTP status code that is passed in parameter statusCode (this is necessary due to ordering constraints
+		// when writing into a http.ResponseWriter (see https://github.com/alexliesenfeld/health/issues/9), and
+		// (3) the response body in the format that the ResultWriter supports.
+		Write(result *CheckerResult, statusCode int, w http.ResponseWriter, r *http.Request) error
 	}
 
 	// JSONResultWriter writes a CheckerResult in JSON format into an
@@ -42,14 +47,15 @@ type (
 )
 
 // Write implements ResultWriter.Write.
-func (r *JSONResultWriter) Write(result *CheckerResult, w http.ResponseWriter, req *http.Request) error {
+func (rw *JSONResultWriter) Write(result *CheckerResult, statusCode int, w http.ResponseWriter, r *http.Request) error {
 	jsonResp, err := json.Marshal(result)
 	if err != nil {
 		return fmt.Errorf("cannot marshal response: %w", err)
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Write(jsonResp)
-	return nil
+	w.WriteHeader(statusCode)
+	_, err = w.Write(jsonResp)
+	return err
 }
 
 // NewJSONResultWriter creates a new instance of a JSONResultWriter.
@@ -58,10 +64,6 @@ func NewJSONResultWriter() *JSONResultWriter {
 }
 
 // NewHandler creates a new health check http.Handler.
-// If the Checker was not yet started (see Checker.IsStarted),
-// it will be started automatically (see Checker.Start).
-// You can disable this autostart by adding the WithDisabledAutostart
-// configuration option.
 func NewHandler(checker Checker, options ...HandlerOption) http.HandlerFunc {
 	cfg := createConfig(options)
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -72,8 +74,8 @@ func NewHandler(checker Checker, options ...HandlerOption) http.HandlerFunc {
 
 		// Write HTTP response
 		disableResponseCache(w)
-		w.WriteHeader(mapHTTPStatus(result.Status, cfg.statusCodeUp, cfg.statusCodeDown))
-		cfg.resultWriter.Write(&result, w, r)
+		statusCode := mapHTTPStatusCode(result.Status, cfg.statusCodeUp, cfg.statusCodeDown)
+		cfg.resultWriter.Write(&result, statusCode, w, r)
 	}
 }
 
@@ -86,7 +88,7 @@ func disableResponseCache(w http.ResponseWriter) {
 	w.Header().Set("Expires", "-1")
 }
 
-func mapHTTPStatus(status AvailabilityStatus, statusCodeUp int, statusCodeDown int) int {
+func mapHTTPStatusCode(status AvailabilityStatus, statusCodeUp int, statusCodeDown int) int {
 	if status == StatusDown || status == StatusUnknown {
 		return statusCodeDown
 	}
