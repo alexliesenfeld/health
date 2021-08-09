@@ -298,7 +298,7 @@ func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 	var status = ck.state.Status
 	var checkResults *map[string]CheckResult
 
-	if !ck.cfg.detailsDisabled {
+	if len(ck.cfg.checks) > 0 && !ck.cfg.detailsDisabled {
 		checkResults = &map[string]CheckResult{}
 		for _, c := range ck.cfg.checks {
 			checkState := ck.state.CheckState[c.Name]

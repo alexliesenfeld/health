@@ -102,3 +102,18 @@ func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
 	}
 	doTestHandler(t, http.StatusNoContent, http.StatusTeapot, status, http.StatusTeapot)
 }
+
+func TestWhenChecksEmptyThenHandlerResultContainNoChecksMap(t *testing.T) {
+	// Arrange
+	r := httptest.NewRequest(http.MethodGet, "/health", nil)
+	w := httptest.NewRecorder()
+
+	// Act
+	NewHandler(NewChecker()).ServeHTTP(w, r)
+
+	// Assert
+	if w.Body.String() != "{\"status\":\"up\"}" {
+		t.Errorf("response does not contain the expected result")
+	}
+
+}
