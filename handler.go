@@ -47,15 +47,15 @@ type (
 )
 
 // Write implements ResultWriter.Write.
-func (r *JSONResultWriter) Write(result *CheckerResult, statusCode int, w http.ResponseWriter, req *http.Request) error {
+func (rw *JSONResultWriter) Write(result *CheckerResult, statusCode int, w http.ResponseWriter, r *http.Request) error {
 	jsonResp, err := json.Marshal(result)
 	if err != nil {
 		return fmt.Errorf("cannot marshal response: %w", err)
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(statusCode)
-	w.Write(jsonResp)
-	return nil
+	_, err = w.Write(jsonResp)
+	return err
 }
 
 // NewJSONResultWriter creates a new instance of a JSONResultWriter.
