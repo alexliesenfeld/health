@@ -1,6 +1,5 @@
 # This file contains a Kubernetes pod configuration example with a readiness and liveliness check.
-# It can be used in addition to the health check implementation located in the file "mail.go" in the
-# same directory.
+# It can be used to complement the health check implementation from file "main.go" in the same directory.
 apiVersion: v1
 kind: Pod
 metadata:
