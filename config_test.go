@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -14,14 +15,12 @@ func TestWithPeriodicCheckConfig(t *testing.T) {
 	// Arrange
 	expectedName := "test"
 	cfg := checkerConfig{checks: map[string]*Check{}}
-	check := Check{Name: expectedName}
 	interval := 5 * time.Second
 	initialDelay := 1 * time.Minute
+	check := Check{Name: expectedName, updateInterval: interval, initialDelay: initialDelay}
 
 	// Act
 	WithPeriodicCheck(interval, initialDelay, check)(&cfg)
-	check.updateInterval = interval
-	check.initialDelay = initialDelay
 
 	// Assert
 	assert.Equal(t, 1, len(cfg.checks))
@@ -87,6 +86,61 @@ func TestWithMaxErrorMessageLengthConfig(t *testing.T) {
 	assert.Equal(t, uint(300), cfg.maxErrMsgLen)
 }
 
+func TestWithDisabledDetailsConfig(t *testing.T) {
+	// Arrange
+	cfg := checkerConfig{}
+
+	// Act
+	WithDisabledDetails()(&cfg)
+
+	// Assert
+	assert.Equal(t, true, cfg.detailsDisabled)
+}
+
+func TestWithMiddlewareConfig(t *testing.T) {
+	// Arrange
+	cfg := handlerConfig{}
+	mw := func(MiddlewareFunc) MiddlewareFunc {
+		return func(r *http.Request) CheckerResult {
+			return CheckerResult{StatusUp, nil}
+		}
+	}
+
+	// Act
+	WithMiddleware(mw)(&cfg)
+
+	// Assert
+	assert.Equal(t, 1, len(cfg.middleware))
+}
+
+func TestWithInterceptorConfig(t *testing.T) {
+	// Arrange
+	cfg := checkerConfig{}
+	interceptor := func(InterceptorFunc) InterceptorFunc {
+		return func(ctx context.Context, name string, state CheckState) CheckState {
+			return CheckState{}
+		}
+	}
+
+	// Act
+	WithInterceptors(interceptor)(&cfg)
+
+	// Assert
+	assert.Equal(t, 1, len(cfg.interceptors))
+}
+
+func TestWithResultWriterConfig(t *testing.T) {
+	// Arrange
+	cfg := handlerConfig{}
+	w := resultWriterMock{}
+
+	// Act
+	WithResultWriter(&w)(&cfg)
+
+	// Assert
+	assert.Equal(t, &w, cfg.resultWriter)
+}
+
 func TestWithStatusChangeListenerConfig(t *testing.T) {
 	// Arrange
 	cfg := checkerConfig{}
@@ -130,4 +184,20 @@ func TestNewCheckerWithDefaults(t *testing.T) {
 	assert.Equal(t, 30*time.Second, ckr.cfg.timeout)
 	assert.Equal(t, uint(500), ckr.cfg.maxErrMsgLen)
 	assert.True(t, configApplied)
+}
+
+func TestCheckerAutostartConfig(t *testing.T) {
+	// Arrange + Act
+	c := NewChecker()
+
+	// Assert
+	assert.True(t, c.IsStarted())
+}
+
+func TestCheckerAutostartDisabledConfig(t *testing.T) {
+	// Arrange
+	c := NewChecker(WithDisabledAutostart())
+
+	// Assert
+	assert.False(t, c.IsStarted())
 }
