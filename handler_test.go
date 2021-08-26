@@ -38,6 +38,14 @@ func (ck *checkerMock) IsStarted() bool {
 	return ck.Called().Get(0).(bool)
 }
 
+type resultWriterMock struct {
+	mock.Mock
+}
+
+func (ck *resultWriterMock) Write(result *CheckerResult, statusCode int, w http.ResponseWriter, r *http.Request) error {
+	return ck.Called(result, statusCode, w, r).Get(0).(error)
+}
+
 func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatus CheckerResult, expectedStatusCode int) {
 	// Arrange
 	response := httptest.NewRecorder()
