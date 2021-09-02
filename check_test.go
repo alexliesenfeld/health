@@ -153,20 +153,22 @@ func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err erro
 	}
 }
 
-func doTestCheckerCheckWithIgnoredFunc(t *testing.T, updateInterval time.Duration, err error, ignoreTwo bool, expectedStatus AvailabilityStatus) {
+func doTestCheckerCheckWithIgnoredFunc(t *testing.T, updateInterval time.Duration,
+	errOne error, ignoreOne bool, errTwo error, ignoreTwo bool, expectedStatus AvailabilityStatus) {
 	// Arrange
 	ckr := NewChecker(
 		WithTimeout(10*time.Second),
 		WithCheck(Check{
 			Name: "check1",
 			Check: func(ctx context.Context) error {
-				return nil
+				return errOne
 			},
+			Ignore: ignoreOne,
 		}),
 		WithPeriodicCheck(updateInterval, 0, Check{
 			Name: "check2",
 			Check: func(ctx context.Context) error {
-				return err
+				return errTwo
 			},
 			Ignore: ignoreTwo,
 		}),
@@ -193,7 +195,13 @@ func TestWhenOneCheckFailedThenAggregatedResultDown(t *testing.T) {
 }
 
 func TestWhenOneIgnoredCheckFailedThenAggregatedResultUp(t *testing.T) {
-	doTestCheckerCheckWithIgnoredFunc(t, 0, fmt.Errorf("this is a check error"), true, StatusUp)
+	doTestCheckerCheckWithIgnoredFunc(t, 0,
+		fmt.Errorf("this is a check error"), true, nil, false, StatusUp)
+}
+
+func TestWhenOneIgnoredPeriodicCheckFailedThenAggregatedResultUp(t *testing.T) {
+	doTestCheckerCheckWithIgnoredFunc(t, 0,
+		nil, false, fmt.Errorf("this is a check error"), true, StatusUp)
 }
 
 func TestCheckSuccessNotAllChecksExecutedYet(t *testing.T) {
