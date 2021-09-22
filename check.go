@@ -222,22 +222,21 @@ func (ck *defaultChecker) Check(ctx context.Context) CheckerResult {
 
 func (ck *defaultChecker) runSynchronousChecks(ctx context.Context) {
 	var (
-		cfg                = ck.cfg
-		numChecks          = len(cfg.checks)
+		numChecks          = len(ck.cfg.checks)
 		resChan            = make(chan checkResult, numChecks)
 		numInitiatedChecks = 0
 	)
 
-	for _, c := range cfg.checks {
+	for _, c := range ck.cfg.checks {
 		checkState := ck.state.CheckState[c.Name]
-		if !isPeriodicCheck(c) && isCacheExpired(cfg.cacheTTL, &checkState) {
+		if !isPeriodicCheck(c) && isCacheExpired(ck.cfg.cacheTTL, &checkState) {
 			numInitiatedChecks++
-			go func(ctx context.Context, check Check, state CheckState) {
-				withCheckContext(ctx, &check, func(ctx context.Context) {
-					_, state = executeCheck(ctx, &cfg, &check, state)
-					resChan <- checkResult{check.Name, state}
+			go func(check *Check) {
+				withCheckContext(ctx, check, func(ctx context.Context) {
+					_, checkState := executeCheck(ctx, &ck.cfg, check, checkState)
+					resChan <- checkResult{check.Name, checkState}
 				})
-			}(ctx, *c, checkState)
+			}(c)
 		}
 	}
 
@@ -258,7 +257,7 @@ func (ck *defaultChecker) startPeriodicChecks() {
 		if isPeriodicCheck(check) {
 			endChan := make(chan *sync.WaitGroup, 1)
 			ck.endChans = append(ck.endChans, endChan)
-			go func(check Check, cfg checkerConfig, state CheckState) {
+			go func(check *Check, checkState CheckState) {
 				defer close(endChan)
 				if check.initialDelay > 0 {
 					if waitForStopSignal(check.initialDelay, endChan) {
@@ -266,17 +265,17 @@ func (ck *defaultChecker) startPeriodicChecks() {
 					}
 				}
 				for {
-					withCheckContext(context.Background(), &check, func(ctx context.Context) {
-						ctx, state = executeCheck(ctx, &cfg, &check, state)
+					withCheckContext(context.Background(), check, func(ctx context.Context) {
+						ctx, checkState = executeCheck(ctx, &ck.cfg, check, checkState)
 						ck.mtx.Lock()
-						ck.updateState(ctx, checkResult{check.Name, state})
+						ck.updateState(ctx, checkResult{check.Name, checkState})
 						ck.mtx.Unlock()
 					})
 					if waitForStopSignal(check.updateInterval, endChan) {
 						return
 					}
 				}
-			}(*check, ck.cfg, ck.state.CheckState[check.Name])
+			}(check, ck.state.CheckState[check.Name])
 		}
 	}
 }
