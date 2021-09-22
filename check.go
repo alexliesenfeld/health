@@ -257,7 +257,7 @@ func (ck *defaultChecker) startPeriodicChecks() {
 		if isPeriodicCheck(check) {
 			endChan := make(chan *sync.WaitGroup, 1)
 			ck.endChans = append(ck.endChans, endChan)
-			go func(check *Check, state CheckState) {
+			go func(check *Check, checkState CheckState) {
 				defer close(endChan)
 				if check.initialDelay > 0 {
 					if waitForStopSignal(check.initialDelay, endChan) {
@@ -266,9 +266,9 @@ func (ck *defaultChecker) startPeriodicChecks() {
 				}
 				for {
 					withCheckContext(context.Background(), check, func(ctx context.Context) {
-						ctx, state = executeCheck(ctx, &ck.cfg, check, state)
+						ctx, checkState = executeCheck(ctx, &ck.cfg, check, checkState)
 						ck.mtx.Lock()
-						ck.updateState(ctx, checkResult{check.Name, state})
+						ck.updateState(ctx, checkResult{check.Name, checkState})
 						ck.mtx.Unlock()
 					})
 					if waitForStopSignal(check.updateInterval, endChan) {
