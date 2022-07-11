@@ -3,10 +3,11 @@ package health
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStatusUnknownBeforeStatusUp(t *testing.T) {
@@ -34,33 +35,43 @@ func TestStatusDownBeforeStatusUnknown(t *testing.T) {
 func doTestEvaluateAvailabilityStatus(
 	t *testing.T,
 	expectedStatus AvailabilityStatus,
-	maxTimeInError time.Duration,
-	maxFails uint,
+	maxTimeInError,
+	minTimeInSuccess time.Duration,
+	maxFails,
+	minSuccess uint,
 	state CheckState,
 ) {
+	// Arrange
+	check := &Check{
+		MaxTimeInError:         maxTimeInError,
+		MinTimeInSuccess:       minTimeInSuccess,
+		MaxContiguousFails:     maxFails,
+		MinContiguousSuccesses: minSuccess,
+	}
+
 	// Act
-	result := evaluateCheckStatus(&state, maxTimeInError, maxFails)
+	result := evaluateCheckStatus(&state, check)
 
 	// Assert
 	assert.Equal(t, expectedStatus, result)
 }
 
 func TestWhenNoChecksMadeYetThenStatusUnknown(t *testing.T) {
-	doTestEvaluateAvailabilityStatus(t, StatusUnknown, 0, 0, CheckState{
+	doTestEvaluateAvailabilityStatus(t, StatusUnknown, 0, 0, 0, 0, CheckState{
 		LastCheckedAt: &time.Time{},
 	})
 }
 
 func TestWhenNoErrorThenStatusUp(t *testing.T) {
 	now := time.Now()
-	doTestEvaluateAvailabilityStatus(t, StatusUp, 0, 0, CheckState{
+	doTestEvaluateAvailabilityStatus(t, StatusUp, 0, 0, 0, 0, CheckState{
 		LastCheckedAt: &now,
 	})
 }
 
 func TestWhenErrorThenStatusDown(t *testing.T) {
 	now := time.Now()
-	doTestEvaluateAvailabilityStatus(t, StatusDown, 0, 0, CheckState{
+	doTestEvaluateAvailabilityStatus(t, StatusDown, 0, 0, 0, 0, CheckState{
 		LastCheckedAt: &now,
 		Result:        fmt.Errorf("example error"),
 	})
@@ -70,7 +81,7 @@ func TestWhenErrorAndMaxFailuresThresholdNotCrossedThenStatusWarn(t *testing.T) 
 	now := time.Now()
 	lastSuccessAt := now.Add(-3 * time.Minute)
 
-	doTestEvaluateAvailabilityStatus(t, StatusUp, 1*time.Second, uint(10), CheckState{
+	doTestEvaluateAvailabilityStatus(t, StatusUp, 1*time.Second, 0, uint(10), 0, CheckState{
 		LastCheckedAt:       &now,
 		Result:              fmt.Errorf("example error"),
 		FirstCheckStartedAt: now.Add(-2 * time.Minute),
@@ -82,7 +93,7 @@ func TestWhenErrorAndMaxFailuresThresholdNotCrossedThenStatusWarn(t *testing.T) 
 func TestWhenErrorAndMaxTimeInErrorThresholdNotCrossedThenStatusWarn(t *testing.T) {
 	now := time.Now()
 	lastSuccessAt := now.Add(-2 * time.Minute)
-	doTestEvaluateAvailabilityStatus(t, StatusUp, 1*time.Hour, uint(1), CheckState{
+	doTestEvaluateAvailabilityStatus(t, StatusUp, 1*time.Hour, 0, uint(1), 0, CheckState{
 		LastCheckedAt:       &now,
 		Result:              fmt.Errorf("example error"),
 		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
@@ -94,12 +105,90 @@ func TestWhenErrorAndMaxTimeInErrorThresholdNotCrossedThenStatusWarn(t *testing.
 func TestWhenErrorAndAllThresholdsCrossedThenStatusDown(t *testing.T) {
 	now := time.Now()
 	lastSuccessAt := now.Add(-2 * time.Minute)
-	doTestEvaluateAvailabilityStatus(t, StatusDown, 1*time.Second, uint(1), CheckState{
+	doTestEvaluateAvailabilityStatus(t, StatusDown, 1*time.Second, 0, uint(1), 0, CheckState{
 		LastCheckedAt:       &now,
 		Result:              fmt.Errorf("example error"),
 		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
 		LastSuccessAt:       &lastSuccessAt,
 		ContiguousFails:     5,
+	})
+}
+
+func TestWhenErrorAtStartupBelowThresholdThenStatusDown(t *testing.T) {
+	now := time.Now()
+	doTestEvaluateAvailabilityStatus(t, StatusDown, 0, 0, uint(5), 0, CheckState{
+		LastCheckedAt:   &now,
+		Result:          fmt.Errorf("example error"),
+		ContiguousFails: 1,
+	})
+}
+
+func TestWhenSuccessAndMinSuccessThresholdNotCrossedThenUnknown(t *testing.T) {
+	now := time.Now()
+	doTestEvaluateAvailabilityStatus(t, StatusUnknown, 0, 0, 0, uint(10), CheckState{
+		Status:              StatusUnknown,
+		LastCheckedAt:       &now,
+		ContiguousSuccesses: 5,
+	})
+}
+
+func TestWhenSuccessAndMinTimeSinceStartedNotCrossedThenUnknown(t *testing.T) {
+	now := time.Now()
+	doTestEvaluateAvailabilityStatus(t, StatusUnknown, 0, 10*time.Second, 0, 0, CheckState{
+		Status:              StatusUnknown,
+		LastCheckedAt:       &now,
+		FirstCheckStartedAt: time.Now().Add(-5 * time.Second),
+	})
+}
+
+func TestWhenSuccessAndMinTimeSinceStartedCrossedThenUp(t *testing.T) {
+	now := time.Now()
+	doTestEvaluateAvailabilityStatus(t, StatusUp, 0, 10*time.Second, 0, 0, CheckState{
+		Status:              StatusUnknown,
+		LastCheckedAt:       &now,
+		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
+	})
+}
+
+func TestWhenSuccessAndMinSuccessTimeNotCrossedThenDown(t *testing.T) {
+	now := time.Now()
+	lastFailureAt := time.Now().Add(-5 * time.Second)
+	doTestEvaluateAvailabilityStatus(t, StatusDown, 0, 10*time.Second, 0, 0, CheckState{
+		Status:              StatusDown,
+		LastCheckedAt:       &now,
+		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
+		LastFailureAt:       &lastFailureAt,
+	})
+}
+
+func TestWhenSuccessAndMinSuccessTimeCrossedThenUp(t *testing.T) {
+	now := time.Now()
+	lastFailureAt := time.Now().Add(-3 * time.Minute)
+	doTestEvaluateAvailabilityStatus(t, StatusUp, 0, 10*time.Second, 0, 0, CheckState{
+		Status:              StatusDown,
+		LastCheckedAt:       &now,
+		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
+		LastFailureAt:       &lastFailureAt,
+	})
+}
+
+func TestWhenSuccessAndMinSuccessThresholdCrossedThenUp(t *testing.T) {
+	now := time.Now()
+	doTestEvaluateAvailabilityStatus(t, StatusUp, 0, 0, 0, uint(5), CheckState{
+		Status:              StatusUnknown,
+		LastCheckedAt:       &now,
+		ContiguousSuccesses: 10,
+	})
+}
+
+func TestWhenSuccessAndMinSuccessThresholdAndTimeCrossedThenUp(t *testing.T) {
+	now := time.Now()
+	lastFailureAt := time.Now().Add(-3 * time.Minute)
+	doTestEvaluateAvailabilityStatus(t, StatusUp, 0, 10*time.Second, 0, uint(5), CheckState{
+		Status:              StatusDown,
+		LastCheckedAt:       &now,
+		ContiguousSuccesses: 10,
+		LastFailureAt:       &lastFailureAt,
 	})
 }
 

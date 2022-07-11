@@ -75,6 +75,8 @@ type (
 		FirstCheckStartedAt time.Time
 		// ContiguousFails holds the number of how often the check failed in a row.
 		ContiguousFails uint
+		// ContiguousSuccesses holds the number of how often the check succeeded in a row.
+		ContiguousSuccesses uint
 		// Result holds the error of the last check (nil if successful).
 		Result error
 		// The current availability status of the check.
@@ -385,13 +387,15 @@ func createNextCheckState(checkedAt time.Time, result error, check *Check, state
 
 	if state.Result == nil {
 		state.ContiguousFails = 0
+		state.ContiguousSuccesses++
 		state.LastSuccessAt = &checkedAt
 	} else {
 		state.ContiguousFails++
+		state.ContiguousSuccesses = 0
 		state.LastFailureAt = &checkedAt
 	}
 
-	state.Status = evaluateCheckStatus(&state, check.MaxTimeInError, check.MaxContiguousFails)
+	state.Status = evaluateCheckStatus(&state, check)
 
 	return state
 }
@@ -407,21 +411,34 @@ func toErrorDesc(err error, maxLen uint) *string {
 	return nil
 }
 
-func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFails uint) AvailabilityStatus {
+func evaluateCheckStatus(state *CheckState, check *Check) AvailabilityStatus {
 	if state.LastCheckedAt.IsZero() {
 		return StatusUnknown
 	} else if state.Result != nil {
-		maxTimeInErrorSinceStartPassed := !state.FirstCheckStartedAt.Add(maxTimeInError).After(time.Now())
+		maxTimeInErrorSinceStartPassed := !state.FirstCheckStartedAt.Add(check.MaxTimeInError).After(time.Now())
 		maxTimeInErrorSinceLastSuccessPassed := state.LastSuccessAt == nil ||
-			!state.LastSuccessAt.Add(maxTimeInError).After(time.Now())
+			!state.LastSuccessAt.Add(check.MaxTimeInError).After(time.Now())
 
 		timeInErrorThresholdCrossed := maxTimeInErrorSinceStartPassed && maxTimeInErrorSinceLastSuccessPassed
-		failCountThresholdCrossed := state.ContiguousFails >= maxFails
+		failCountThresholdCrossed := state.LastSuccessAt == nil || (state.ContiguousFails >= check.MaxContiguousFails)
 
 		if failCountThresholdCrossed && timeInErrorThresholdCrossed {
 			return StatusDown
 		}
+	} else {
+		minTimeInSuccessSinceStartPassed := !state.FirstCheckStartedAt.Add(check.MinTimeInSuccess).After(time.Now())
+		minTimeInSuccessSinceLastErrorPassed := state.LastFailureAt == nil ||
+			!state.LastFailureAt.Add(check.MinTimeInSuccess).After(time.Now())
+
+		timeInSuccessThresholdCrossed := minTimeInSuccessSinceStartPassed && minTimeInSuccessSinceLastErrorPassed
+
+		successCountThresholdCrossed := state.ContiguousSuccesses >= check.MinContiguousSuccesses
+
+		if !(successCountThresholdCrossed && timeInSuccessThresholdCrossed) {
+			return state.Status
+		}
 	}
+
 	return StatusUp
 }
 
