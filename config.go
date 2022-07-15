@@ -32,7 +32,7 @@ type (
 		// in a success state before it is considered up/available.
 		MinTimeInSuccess time.Duration // Optional
 
-		// MinContiguousSuccesses will set a mainium number of contiguous
+		// MinContiguousSuccesses will set a minimum number of contiguous
 		// check successes before the service is considered up/available.
 		MinContiguousSuccesses uint // Optional
 
