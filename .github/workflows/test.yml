@@ -19,10 +19,10 @@ jobs:
 
       - name: Check out code
         uses: actions/checkout@v1
-        
+
       - name: Start test environment
         run: docker-compose up -d
-        
+
       - name: Get dependencies
         run: go get -v -t -d ./...
 
