@@ -28,6 +28,14 @@ type (
 		// check fails until the service is considered down/unavailable.
 		MaxContiguousFails uint // Optional
 
+		// MinTimeInSuccess will set a duration for how long a service must be
+		// in a success state before it is considered up/available.
+		MinTimeInSuccess time.Duration // Optional
+
+		// MinContiguousSuccesses will set a minimum number of contiguous
+		// check successes before the service is considered up/available.
+		MinContiguousSuccesses uint // Optional
+
 		// StatusListener allows to set a listener that will be called
 		// whenever the AvailabilityStatus (e.g. from "up" to "down").
 		StatusListener func(ctx context.Context, name string, state CheckState) // Optional
