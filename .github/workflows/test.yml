@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Start test environment
-        run: docker-compose up -d
+        run: docker-compose -f checks/docker-compose.yaml up -d
         
       - name: Get dependencies
         run: go get -v -t -d ./...
