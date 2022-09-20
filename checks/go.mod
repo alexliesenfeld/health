@@ -1,4 +1,4 @@
-module github.com/alexliesenfeld/health/checks/postgres
+module github.com/alexliesenfeld/health/checks
 
 go 1.13
 
