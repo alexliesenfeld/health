@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Test health library
+    name: Test health module
     runs-on: ubuntu-latest
     steps:
       - name: Set up most recent version of Go
@@ -35,7 +35,7 @@ jobs:
           name: codecov-umbrella
 
   test-checks:
-    name: Test checks library
+    name: Test checks module
     runs-on: ubuntu-latest
     steps:
       - name: Set up most recent version of Go
