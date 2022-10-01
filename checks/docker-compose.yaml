@@ -15,3 +15,8 @@ services:
       interval: 3s
       timeout: 3s
       retries: 5
+
+  smtp:
+    image: bytemark/smtp
+    ports:
+      - "25:25"
