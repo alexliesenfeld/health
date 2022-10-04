@@ -13,7 +13,7 @@ func TestStatusUp(t *testing.T) {
 	client, err := smtp.Dial("localhost:25")
 	require.NoError(t, err)
 
-	check := TestConnection(client)
+	check := New(client)
 
 	// Act
 	err = check(context.Background())
