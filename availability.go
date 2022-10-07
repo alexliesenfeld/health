@@ -27,7 +27,7 @@ func (s AvailabilityStatus) criticality() int {
 	}
 }
 
-func (s AvailabilityStatus) toPrometheusInt() int {
+func (s AvailabilityStatus) toPrometheusValue() float64 {
 	switch s {
 	case StatusDown:
 		return 0
