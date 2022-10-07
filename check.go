@@ -5,9 +5,15 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type (
+	metricOptions struct {
+		namespace string
+		enabled   bool
+	}
 	checkerConfig struct {
 		timeout              time.Duration
 		checks               map[string]*Check
@@ -17,14 +23,16 @@ type (
 		interceptors         []Interceptor
 		detailsDisabled      bool
 		autostartDisabled    bool
+		metricOptions        *metricOptions
 	}
 
 	defaultChecker struct {
-		started  bool
-		mtx      sync.Mutex
-		cfg      checkerConfig
-		state    CheckerState
-		endChans []chan *sync.WaitGroup
+		started   bool
+		mtx       sync.Mutex
+		cfg       checkerConfig
+		state     CheckerState
+		endChans  []chan *sync.WaitGroup
+		promGauge *prometheus.GaugeVec
 	}
 
 	checkResult struct {
@@ -114,34 +122,7 @@ type (
 	// InterceptorFunc is an interceptor function that intercepts any call to
 	// a components health check function.
 	InterceptorFunc func(ctx context.Context, name string, state CheckState) CheckState
-
-	// AvailabilityStatus expresses the availability of either
-	// a component or the whole system.
-	AvailabilityStatus string
 )
-
-const (
-	// StatusUnknown holds the information that the availability
-	// status is not known, because not all checks were executed yet.
-	StatusUnknown AvailabilityStatus = "unknown"
-	// StatusUp holds the information that the system or a component
-	// is up and running.
-	StatusUp AvailabilityStatus = "up"
-	// StatusDown holds the information that the system or a component
-	// down and not available.
-	StatusDown AvailabilityStatus = "down"
-)
-
-func (s AvailabilityStatus) criticality() int {
-	switch s {
-	case StatusDown:
-		return 2
-	case StatusUnknown:
-		return 1
-	default:
-		return 0
-	}
-}
 
 func newDefaultChecker(cfg checkerConfig) *defaultChecker {
 	checkState := map[string]CheckState{}
@@ -154,7 +135,20 @@ func newDefaultChecker(cfg checkerConfig) *defaultChecker {
 		state:    CheckerState{Status: StatusUnknown, CheckState: checkState},
 		endChans: []chan *sync.WaitGroup{},
 	}
-
+	if cfg.metricOptions != nil && cfg.metricOptions.enabled {
+		gaugeOpts := prometheus.GaugeOpts{
+			Name: "check_state",
+			Help: "status of each check",
+		}
+		if cfg.metricOptions.namespace != "" {
+			gaugeOpts.Namespace = cfg.metricOptions.namespace
+		}
+		resultGauge := prometheus.NewGaugeVec(
+			gaugeOpts, []string{"name"},
+		)
+		prometheus.MustRegister(resultGauge)
+		checker.promGauge = resultGauge
+	}
 	if !cfg.autostartDisabled {
 		checker.Start()
 	}
@@ -305,6 +299,9 @@ func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 				Status:    checkState.Status,
 				Error:     toErrorDesc(checkState.Result, ck.cfg.maxErrMsgLen),
 				Timestamp: checkState.LastCheckedAt,
+			}
+			if ck.promGauge != nil {
+				ck.promGauge.WithLabelValues(c.Name).Set(float64(checkState.Status.toPrometheusValue()))
 			}
 		}
 	}

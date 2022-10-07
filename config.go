@@ -193,3 +193,13 @@ func WithInterceptors(interceptors ...Interceptor) CheckerOption {
 		cfg.interceptors = interceptors
 	}
 }
+
+// WithMetrics will enable prometheus metrics
+func WithMetrics(namespace string) CheckerOption {
+	return func(cfg *checkerConfig) {
+		cfg.metricOptions = &metricOptions{
+			enabled:   true,
+			namespace: namespace,
+		}
+	}
+}
