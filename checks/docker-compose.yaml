@@ -11,7 +11,7 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD", "pg_isready" ]
+      test: ["CMD", "pg_isready"]
       interval: 3s
       timeout: 3s
       retries: 5
@@ -20,3 +20,8 @@ services:
     image: bytemark/smtp
     ports:
       - "25:25"
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
