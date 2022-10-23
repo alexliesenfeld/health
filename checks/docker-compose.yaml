@@ -20,3 +20,8 @@ services:
     image: bytemark/smtp
     ports:
       - "25:25"
+
+  memcached:
+    image: docker.io/bitnami/memcached:1
+    ports:
+      - '11211:11211'
