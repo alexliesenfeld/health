@@ -7,7 +7,6 @@ import (
 )
 
 // New creates a new Memcache client health check function.
-// It is expects you to provide an already established memcache connection.
 func New(addr string) func() error {
 	return func() error {
 		client := memcache.New(addr)
