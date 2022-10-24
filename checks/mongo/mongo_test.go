@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 func TestStatusUp(t *testing.T) {
@@ -16,8 +15,9 @@ func TestStatusUp(t *testing.T) {
 	client, err := mongo.Connect(ctx, options.Client().
 		ApplyURI("mongodb://test:test@localhost:27017/?compressors=disabled&gssapiServiceName=mongod"))
 	require.NoError(t, err)
+	defer client.Disconnect(ctx)
 
-	check := New(client, readpref.Primary())
+	check := New("mongodb://test:test@localhost:27017/?compressors=disabled&gssapiServiceName=mongod")
 
 	// Act
 	err = check(ctx)
