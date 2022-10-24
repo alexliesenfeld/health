@@ -12,12 +12,13 @@ import (
 func TestStatusUp(t *testing.T) {
 	// Arrange
 	ctx := context.Background()
+	addr := "mongodb://test:test@localhost:27017/?compressors=disabled&gssapiServiceName=mongod"
 	client, err := mongo.Connect(ctx, options.Client().
-		ApplyURI("mongodb://test:test@localhost:27017/?compressors=disabled&gssapiServiceName=mongod"))
+		ApplyURI(addr))
 	require.NoError(t, err)
 	defer client.Disconnect(ctx)
 
-	check := New("mongodb://test:test@localhost:27017/?compressors=disabled&gssapiServiceName=mongod")
+	check := New(addr)
 
 	// Act
 	err = check(ctx)

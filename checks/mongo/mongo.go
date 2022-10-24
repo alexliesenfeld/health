@@ -14,7 +14,7 @@ import (
 func New(addr string) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		client, err := mongo.Connect(ctx, options.Client().
-			ApplyURI("mongodb://test:test@localhost:27017/?compressors=disabled&gssapiServiceName=mongod"))
+			ApplyURI(addr))
 
 		if err != nil {
 			return err
