@@ -89,6 +89,10 @@ func main() {
 			// Check is allowed to stay for up to 1 minute in an error
 			// state until considered unavailable.
 			MaxTimeInError: 1 * time.Minute,
+			// Disables the default behaviour to automatically recover from panics and converting them into errors
+			// rather than terminating the application. You most likely do not want to configure this explicitly
+			// (i.e. leaving this configuration property away) in which case the default value (false) will be used.
+			DisablePanicRecovery: false,
 		}),
 	)
 

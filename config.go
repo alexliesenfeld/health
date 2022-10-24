@@ -36,6 +36,10 @@ type (
 		// order as they appear in the list.
 		Interceptors []Interceptor
 
+		// DisablePanicRecovery disables automatic recovery from panics. If left in its default value (false),
+		// panics will be automatically converted into errors instead.
+		DisablePanicRecovery bool
+
 		updateInterval time.Duration
 		initialDelay   time.Duration
 	}

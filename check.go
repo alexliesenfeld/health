@@ -367,7 +367,18 @@ func executeCheck(
 
 func executeCheckFunc(ctx context.Context, check *Check) error {
 	res := make(chan error)
+
 	go func() {
+		defer func() {
+			if !check.DisablePanicRecovery {
+				if r := recover(); r != nil {
+					_, ok := r.(error)
+					if !ok {
+						res <- fmt.Errorf("%v", r)
+					}
+				}
+			}
+		}()
 		res <- check.Check(ctx)
 	}()
 
