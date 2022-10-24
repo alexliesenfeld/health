@@ -163,3 +163,28 @@ func TestWhenOneCheckFailedThenAggregatedResultDown(t *testing.T) {
 func TestCheckSuccessNotAllChecksExecutedYet(t *testing.T) {
 	doTestCheckerCheckFunc(t, 5*time.Hour, nil, StatusUnknown)
 }
+
+func TestPanicRecovery(t *testing.T) {
+	// Arrange
+	expectedPanicMsg := "test message"
+	ckr := NewChecker(
+		WithCheck(Check{
+			Name: "iPanic",
+			Check: func(ctx context.Context) error {
+				panic(expectedPanicMsg)
+			},
+		}),
+	)
+
+	// Act
+	res := ckr.Check(context.Background())
+
+	// Assert
+	require.NotNil(t, res.Details)
+	assert.Equal(t, StatusDown, res.Status)
+
+	checkRes, checkResultExists := (*res.Details)["iPanic"]
+	assert.True(t, checkResultExists)
+	assert.NotNil(t, checkRes.Error)
+	assert.Equal(t, *checkRes.Error, expectedPanicMsg)
+}
