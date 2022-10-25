@@ -169,7 +169,10 @@ func (ck *defaultChecker) Start() {
 	if !ck.started {
 		ck.started = true
 		defer ck.startPeriodicChecks()
-		defer ck.Check(context.Background())
+
+		// We run the initial check execution in a separate goroutine so that server startup is not blocked in case of
+		// a bad check that runs for a longer period of time.
+		go ck.Check(context.Background())
 	}
 
 	ck.mtx.Unlock()
