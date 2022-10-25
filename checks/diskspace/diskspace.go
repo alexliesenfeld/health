@@ -25,7 +25,7 @@ func New(thresholdBytes uint64, directory string) func(ctx context.Context) erro
 	}
 }
 
-// Wrapper overloaded function for NewUnix() to provide default working directory
+// Wrapper function around New() to provide default working directory
 func NewWorkingDirectory(thresholdBytes uint64) func(ctx context.Context) error {
 	wd, err := os.Getwd()
 	if err != nil {
