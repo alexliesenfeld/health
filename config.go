@@ -59,7 +59,7 @@ type (
 func NewChecker(options ...CheckerOption) Checker {
 	cfg := checkerConfig{
 		cacheTTL:     1 * time.Second,
-		timeout:      30 * time.Second,
+		timeout:      10 * time.Second,
 		maxErrMsgLen: 500,
 		checks:       map[string]*Check{},
 		interceptors: []Interceptor{},
@@ -90,7 +90,7 @@ func WithDisabledDetails() CheckerOption {
 
 // WithTimeout defines a timeout duration for all checks. You can override
 // this timeout by using the timeout value in the Check configuration.
-// Default value is 30 seconds.
+// Default value is 10 seconds.
 func WithTimeout(timeout time.Duration) CheckerOption {
 	return func(cfg *checkerConfig) {
 		cfg.timeout = timeout

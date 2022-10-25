@@ -40,7 +40,7 @@ func main() {
 				// Timeouts need to be set before the check is used (see usage
 				// of checkers.NewHTTP above, where we set a timeout of 3 seconds).
 				// Since this value here is set to a high number by default
-				// (currently 30 seconds), you can basically leave it away here and only
+				// (currently 10 seconds), you can basically leave it away here and only
 				// define the timeout in the checkers.HTTPConfig above.
 				Timeout: 5 * time.Second,
 			}),

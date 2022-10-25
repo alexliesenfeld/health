@@ -38,7 +38,7 @@ func main() {
 			},
 		}),
 
-		// The following check will be executed periodically every 30 seconds.
+		// The following check will be executed periodically every 10 seconds.
 		health.WithPeriodicCheck(5*time.Second, 10*time.Second, health.Check{
 			Name:           "search-engine",
 			StatusListener: onComponentStatusChanged,
