@@ -2,6 +2,9 @@
 ### Breaking Changes
 - This version introduces automatic recovery from panics that can be turned off on a per-check basis like shown in the [showcase example](https://github.com/alexliesenfeld/health/blob/1fcc4c7599ea00dbd0c73c97448b2a1c1d0fff7d/examples/showcase/main.go#L92-L95).
 
+### Improvements
+- The initial check run that is executed on startup is non-blocking anymore.
+
 ## 0.6.0 
 ### Breaking Changes
 - A [ResultWriter](https://pkg.go.dev/github.com/alexliesenfeld/health#ResultWriter) must now additionally write the 
