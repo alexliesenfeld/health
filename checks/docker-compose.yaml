@@ -25,3 +25,17 @@ services:
     image: redis:latest
     ports:
       - "6379:6379"
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: test
+      MONGO_INITDB_ROOT_PASSWORD: test
+
+  memcached:
+    image: docker.io/bitnami/memcached:1
+    ports:
+      - '11211:11211'
+
