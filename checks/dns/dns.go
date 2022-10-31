@@ -2,6 +2,7 @@ package dns
 
 import (
 	"context"
+	"fmt"
 	"net"
 )
 
@@ -9,7 +10,13 @@ import (
 func New(host string) func(ctx context.Context) error {
 	resolver := new(net.Resolver)
 	return func(ctx context.Context) error {
-		_, err := resolver.LookupHost(ctx, host)
-		return err
+		addrs, err := resolver.LookupHost(ctx, host)
+		if err != nil {
+			return err
+		}
+		if len(addrs) == 0 {
+			return fmt.Errorf("could not resolve host")
+		}
+		return nil
 	}
 }
