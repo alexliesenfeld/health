@@ -99,7 +99,7 @@ func TestWithDisabledDetailsConfig(t *testing.T) {
 
 func TestWithMiddlewareConfig(t *testing.T) {
 	// Arrange
-	cfg := handlerConfig{}
+	cfg := HandlerConfig{}
 	mw := func(MiddlewareFunc) MiddlewareFunc {
 		return func(r *http.Request) CheckerResult {
 			return CheckerResult{StatusUp, nil}
@@ -131,7 +131,7 @@ func TestWithInterceptorConfig(t *testing.T) {
 
 func TestWithResultWriterConfig(t *testing.T) {
 	// Arrange
-	cfg := handlerConfig{}
+	cfg := HandlerConfig{}
 	w := resultWriterMock{}
 
 	// Act
