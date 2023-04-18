@@ -48,7 +48,7 @@ type (
 	CheckerOption func(config *checkerConfig)
 
 	// HandlerOption is a configuration option for a Handler (see NewHandler).
-	HandlerOption func(*handlerConfig)
+	HandlerOption func(*HandlerConfig)
 )
 
 // NewChecker creates a new Checker. The provided options will be
@@ -110,7 +110,7 @@ func WithStatusListener(listener func(ctx context.Context, state CheckerState)) 
 // to pro- and post-process HTTP requests and health checks.
 // Refer to the documentation of type Middleware for more information.
 func WithMiddleware(middleware ...Middleware) HandlerOption {
-	return func(cfg *handlerConfig) {
+	return func(cfg *HandlerConfig) {
 		cfg.middleware = append(cfg.middleware, middleware...)
 	}
 }
@@ -119,7 +119,7 @@ func WithMiddleware(middleware ...Middleware) HandlerOption {
 // where the system is considered to be available ("up").
 // Default is HTTP status code 200 (OK).
 func WithStatusCodeUp(httpStatus int) HandlerOption {
-	return func(cfg *handlerConfig) {
+	return func(cfg *HandlerConfig) {
 		cfg.statusCodeUp = httpStatus
 	}
 }
@@ -128,7 +128,7 @@ func WithStatusCodeUp(httpStatus int) HandlerOption {
 // where the system is considered to be unavailable ("down").
 // Default is HTTP status code 503 (Service Unavailable).
 func WithStatusCodeDown(httpStatus int) HandlerOption {
-	return func(cfg *handlerConfig) {
+	return func(cfg *HandlerConfig) {
 		cfg.statusCodeDown = httpStatus
 	}
 }
@@ -136,7 +136,7 @@ func WithStatusCodeDown(httpStatus int) HandlerOption {
 // WithResultWriter is responsible for writing a health check result (see CheckerResult)
 // into an HTTP response. By default, JSONResultWriter will be used.
 func WithResultWriter(writer ResultWriter) HandlerOption {
-	return func(cfg *handlerConfig) {
+	return func(cfg *HandlerConfig) {
 		cfg.resultWriter = writer
 	}
 }

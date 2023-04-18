@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	handlerConfig struct {
+	HandlerConfig struct {
 		statusCodeUp   int
 		statusCodeDown int
 		middleware     []Middleware
@@ -95,8 +95,8 @@ func mapHTTPStatusCode(status AvailabilityStatus, statusCodeUp int, statusCodeDo
 	return statusCodeUp
 }
 
-func createConfig(options []HandlerOption) handlerConfig {
-	cfg := handlerConfig{
+func createConfig(options []HandlerOption) HandlerConfig {
+	cfg := HandlerConfig{
 		statusCodeDown: 503,
 		statusCodeUp:   200,
 		middleware:     []Middleware{},
