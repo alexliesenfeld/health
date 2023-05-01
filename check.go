@@ -369,14 +369,18 @@ func executeCheck(
 }
 
 func executeCheckFunc(ctx context.Context, check *Check) error {
-	res := make(chan error)
+	// If this channel is not bounded, we may have a goroutine leak (e.g., when ctx.Done signals first then
+	// sending the check result into the channel will block forever).
+	res := make(chan error, 1)
 
 	go func() {
 		defer func() {
 			if !check.DisablePanicRecovery {
 				if r := recover(); r != nil {
-					_, ok := r.(error)
-					if !ok {
+					err, ok := r.(error)
+					if ok {
+						res <- err
+					} else {
 						res <- fmt.Errorf("%v", r)
 					}
 				}
