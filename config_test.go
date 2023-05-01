@@ -165,7 +165,7 @@ func TestNewWithDefaults(t *testing.T) {
 	// Assert
 	ckr := checker.(*defaultChecker)
 	assert.Equal(t, 1*time.Second, ckr.cfg.cacheTTL)
-	assert.Equal(t, 30*time.Second, ckr.cfg.timeout)
+	assert.Equal(t, 10*time.Second, ckr.cfg.timeout)
 	assert.Equal(t, uint(500), ckr.cfg.maxErrMsgLen)
 	assert.True(t, configApplied)
 }
@@ -181,7 +181,7 @@ func TestNewCheckerWithDefaults(t *testing.T) {
 	// Assert
 	ckr := checker.(*defaultChecker)
 	assert.Equal(t, 1*time.Second, ckr.cfg.cacheTTL)
-	assert.Equal(t, 30*time.Second, ckr.cfg.timeout)
+	assert.Equal(t, 10*time.Second, ckr.cfg.timeout)
 	assert.Equal(t, uint(500), ckr.cfg.maxErrMsgLen)
 	assert.True(t, configApplied)
 }
