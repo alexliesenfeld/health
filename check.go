@@ -87,7 +87,7 @@ type (
 		// Status is the aggregated system availability status.
 		Status AvailabilityStatus `json:"status"`
 		// Details contains health information for all checked components.
-		Details *map[string]CheckResult `json:"details,omitempty"`
+		Details map[string]CheckResult `json:"details,omitempty"`
 	}
 
 	// CheckResult holds a components health information.
@@ -298,13 +298,13 @@ func (ck *defaultChecker) updateState(ctx context.Context, updates ...checkResul
 
 func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 	var status = ck.state.Status
-	var checkResults *map[string]CheckResult
+	var checkResults map[string]CheckResult
 
 	if len(ck.cfg.checks) > 0 && !ck.cfg.detailsDisabled {
-		checkResults = &map[string]CheckResult{}
+		checkResults = map[string]CheckResult{}
 		for _, c := range ck.cfg.checks {
 			checkState := ck.state.CheckState[c.Name]
-			(*checkResults)[c.Name] = CheckResult{
+			(checkResults)[c.Name] = CheckResult{
 				Status:    checkState.Status,
 				Error:     toErrorDesc(checkState.Result, ck.cfg.maxErrMsgLen),
 				Timestamp: checkState.LastCheckedAt,
