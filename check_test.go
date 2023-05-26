@@ -147,7 +147,7 @@ func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err erro
 	require.NotNil(t, res.Details)
 	assert.Equal(t, expectedStatus, res.Status)
 	for _, checkName := range []string{"check1", "check2"} {
-		_, checkResultExists := (*res.Details)[checkName]
+		_, checkResultExists := res.Details[checkName]
 		assert.True(t, checkResultExists)
 	}
 }
@@ -183,7 +183,7 @@ func TestPanicRecovery(t *testing.T) {
 	require.NotNil(t, res.Details)
 	assert.Equal(t, StatusDown, res.Status)
 
-	checkRes, checkResultExists := (*res.Details)["iPanic"]
+	checkRes, checkResultExists := res.Details["iPanic"]
 	assert.True(t, checkResultExists)
 	assert.NotNil(t, checkRes.Error)
 	assert.Equal(t, *checkRes.Error, expectedPanicMsg)
