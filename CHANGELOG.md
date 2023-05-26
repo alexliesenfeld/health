@@ -1,3 +1,7 @@
+## 0.7.1 (in development)
+### Breaking Changes
+- [`CheckerResult`](https://github.com/alexliesenfeld/health/blob/8d498ec975b54ec3ef47493bbc22c72884359dc2/check.go#L86C1-L91)s `Details` field is now no pointer anymore.
+
 ## 0.7.0
 ### Breaking Changes
 - This version introduces automatic recovery from panics that can be turned off on a per-check basis like shown in the [showcase example](https://github.com/alexliesenfeld/health/blob/1fcc4c7599ea00dbd0c73c97448b2a1c1d0fff7d/examples/showcase/main.go#L92-L95).
