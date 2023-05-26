@@ -78,7 +78,7 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 	err := "hello"
 	status := CheckerResult{
 		Status: StatusUnknown,
-		Details: &map[string]CheckResult{
+		Details: map[string]CheckResult{
 			"check1": {Status: StatusDown, Timestamp: &now, Error: &err},
 			"check2": {Status: StatusUp, Timestamp: &now, Error: nil},
 		},
@@ -91,7 +91,7 @@ func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 	now := time.Now().UTC()
 	status := CheckerResult{
 		Status: StatusUp,
-		Details: &map[string]CheckResult{
+		Details: map[string]CheckResult{
 			"check1": {Status: StatusUp, Timestamp: &now, Error: nil},
 		},
 	}
@@ -104,7 +104,7 @@ func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
 	err := "an error message"
 	status := CheckerResult{
 		Status: StatusDown,
-		Details: &map[string]CheckResult{
+		Details: map[string]CheckResult{
 			"check1": {Status: StatusDown, Timestamp: &now, Error: &err},
 		},
 	}
