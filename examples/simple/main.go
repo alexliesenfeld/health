@@ -19,6 +19,13 @@ func main() {
 	// Create a new Checker.
 	checker := health.NewChecker(
 
+        // Set service info
+        health.WithInfo(map[string]string{
+            "system": "health-example",
+            "version": "v0.0.8",
+            "env": "dev",
+        }),
+
 		// Set the time-to-live for our cache to 1 second (default).
 		health.WithCacheDuration(1*time.Second),
 

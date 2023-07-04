@@ -10,6 +10,7 @@ import (
 type (
 	checkerConfig struct {
 		timeout              time.Duration
+		systemInfo           map[string]string
 		checks               map[string]*Check
 		maxErrMsgLen         uint
 		cacheTTL             time.Duration
@@ -84,6 +85,8 @@ type (
 	// CheckerResult holds the aggregated system availability status and
 	// detailed information about the individual checks.
 	CheckerResult struct {
+		// Info represent a static values about your service
+		Info map[string]string `json:"info,omitempty"`
 		// Status is the aggregated system availability status.
 		Status AvailabilityStatus `json:"status"`
 		// Details contains health information for all checked components.
@@ -312,7 +315,7 @@ func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 		}
 	}
 
-	return CheckerResult{Status: status, Details: checkResults}
+	return CheckerResult{Status: status, Details: checkResults, Info: ck.cfg.systemInfo}
 }
 
 func isCacheExpired(cacheDuration time.Duration, state *CheckState) bool {

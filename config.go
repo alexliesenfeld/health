@@ -197,3 +197,11 @@ func WithInterceptors(interceptors ...Interceptor) CheckerOption {
 		cfg.interceptors = interceptors
 	}
 }
+
+// WithInfo sets values that will be displayed in the "info" property of the response payload
+// you can use this option if you want to set information about your system or something like that
+func WithInfo(values map[string]string) CheckerOption {
+	return func(cfg *checkerConfig) {
+		cfg.systemInfo = values
+	}
+}
