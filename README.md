@@ -66,11 +66,10 @@ func main() {
 	// Create a new Checker.
 	checker := health.NewChecker(
 
-        // Set service information to be included in all check results (refer to the "info" field of the JSON response body).
+        // Set service information to be included in all check results.
 		health.WithInfo(map[string]any{
 			"version":     "v0.0.1",
 			"environment": "production",
-			"SHA":         "0719f0e2275e07077237ddb55c86ad2e52543555",
 		}),
 
 		// Set the time-to-live for our cache to 1 second (default).
