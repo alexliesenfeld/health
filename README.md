@@ -66,7 +66,7 @@ func main() {
 	// Create a new Checker.
 	checker := health.NewChecker(
 
-        // Set service information to be included in all check results.
+                // Set service information to be included in all check results.
 		health.WithInfo(map[string]any{
 			"version":     "v0.0.1",
 			"environment": "production",
