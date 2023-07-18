@@ -49,7 +49,7 @@ func main() {
 		// call and do some pre- and post-processing, having the check state and check function result at hand.
 		health.WithInterceptors(interceptors.BasicLogger()),
 
-		// Set service info that will be included in all check results.
+		// Set service information to be included in all check results.
 		health.WithInfo(map[string]any{
 			"version":     "v0.0.8",
 			"environment": "production",
