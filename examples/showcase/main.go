@@ -49,6 +49,12 @@ func main() {
 		// call and do some pre- and post-processing, having the check state and check function result at hand.
 		health.WithInterceptors(interceptors.BasicLogger()),
 
+		// Set service info that will be included in all check results.
+		health.WithInfo(map[string]any{
+			"version":     "v0.0.8",
+			"environment": "production",
+		}),
+
 		// A simple successFunc to see if a fake database connection is up.
 		health.WithCheck(health.Check{
 			// Each check gets a unique name.
@@ -125,7 +131,7 @@ func main() {
 	// We Create a new http.Handler that provides health successFunc information
 	// serialized as a JSON string via HTTP.
 	http.Handle("/health", handler)
-	http.ListenAndServe(":3000", nil)
+	http.ListenAndServe(":8001", nil)
 }
 
 func onComponentStatusChanged(_ context.Context, name string, state health.CheckState) {

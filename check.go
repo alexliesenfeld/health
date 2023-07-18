@@ -10,7 +10,7 @@ import (
 type (
 	checkerConfig struct {
 		timeout              time.Duration
-		systemInfo           map[string]string
+		systemInfo           map[string]interface{}
 		checks               map[string]*Check
 		maxErrMsgLen         uint
 		cacheTTL             time.Duration
@@ -85,8 +85,8 @@ type (
 	// CheckerResult holds the aggregated system availability status and
 	// detailed information about the individual checks.
 	CheckerResult struct {
-		// Info represent a static values about your service
-		Info map[string]string `json:"info,omitempty"`
+		// Info contains additional information about this health result.
+		Info map[string]interface{} `json:"info,omitempty"`
 		// Status is the aggregated system availability status.
 		Status AvailabilityStatus `json:"status"`
 		// Details contains health information for all checked components.
