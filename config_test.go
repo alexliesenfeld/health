@@ -102,7 +102,7 @@ func TestWithMiddlewareConfig(t *testing.T) {
 	cfg := HandlerConfig{}
 	mw := func(MiddlewareFunc) MiddlewareFunc {
 		return func(r *http.Request) CheckerResult {
-			return CheckerResult{StatusUp, nil}
+			return CheckerResult{nil, StatusUp, nil}
 		}
 	}
 
