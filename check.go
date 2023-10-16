@@ -173,6 +173,7 @@ func newChecker(cfg checkerConfig) *defaultChecker {
 // Start implements Checker.Start. Please refer to Checker.Start for more information.
 func (ck *defaultChecker) Start() {
 	ck.mtx.Lock()
+	defer ck.mtx.Unlock()
 
 	if !ck.started {
 		ctx, cancelFunc := context.WithCancel(context.Background())
@@ -185,8 +186,6 @@ func (ck *defaultChecker) Start() {
 		// a bad check that runs for a longer period of time.
 		go ck.Check(ctx)
 	}
-
-	ck.mtx.Unlock()
 }
 
 // Stop implements Checker.Stop. Please refer to Checker.Stop for more information.
