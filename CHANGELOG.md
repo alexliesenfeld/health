@@ -1,6 +1,16 @@
-## 0.7.1 (in development)
+## 0.8.0 (in development)
 ### Breaking Changes
-- [`CheckerResult`](https://github.com/alexliesenfeld/health/blob/8d498ec975b54ec3ef47493bbc22c72884359dc2/check.go#L86C1-L91)s `Details` field is now no pointer anymore.
+- [`CheckerResult`](https://github.com/alexliesenfeld/health/blob/8d498ec975b54ec3ef47493bbc22c72884359dc2/check.go#L86C1-L91)s 
+`Details` field is now no pointer anymore.
+- The configuration option [`WithMaxErrorMessageLength`](https://pkg.go.dev/github.com/alexliesenfeld/health@v0.7.0#WithMaxErrorMessageLength) 
+was removed. This used to control the length of the string field [`CheckResult.Error`](https://pkg.go.dev/github.com/alexliesenfeld/health@v0.7.0#CheckResult).
+Instead of returning the error as a string, it is now being returned as an `error`.
+- All [`time.Time`](https://pkg.go.dev/time#Time) fields in [`health.CheckState`](https://pkg.go.dev/github.com/alexliesenfeld/health@v0.7.0#CheckState)
+  are now values rather than pointers. Use the
+[`IsZero`](https://pkg.go.dev/time#Time.IsZero)-method to check if a value has been set or not instead.
+- Interceptor functions (i.e., `InterceptorFunc`) now have a 
+[`health.CheckState`](https://pkg.go.dev/github.com/alexliesenfeld/health@v0.7.0#CheckState) pointer parameter 
+rather than a value. This allows interceptors to modify the check state prior to check function execution. 
 
 ## 0.7.0
 ### Breaking Changes

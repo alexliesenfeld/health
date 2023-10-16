@@ -60,7 +60,6 @@ func NewChecker(options ...CheckerOption) Checker {
 	cfg := checkerConfig{
 		cacheTTL:     1 * time.Second,
 		timeout:      10 * time.Second,
-		maxErrMsgLen: 500,
 		checks:       map[string]*Check{},
 		interceptors: []Interceptor{},
 	}
@@ -69,15 +68,7 @@ func NewChecker(options ...CheckerOption) Checker {
 		opt(&cfg)
 	}
 
-	return newDefaultChecker(cfg)
-}
-
-// WithMaxErrorMessageLength limits maximum number of characters
-// in error messages. Default is 500.
-func WithMaxErrorMessageLength(length uint) CheckerOption {
-	return func(cfg *checkerConfig) {
-		cfg.maxErrMsgLen = length
-	}
+	return newChecker(cfg)
 }
 
 // WithDisabledDetails disables all data in the JSON response body. The AvailabilityStatus will be the only
@@ -203,7 +194,7 @@ func WithInterceptors(interceptors ...Interceptor) CheckerOption {
 // version number, Git SHA, build date, etc. These values will be available in CheckerResult.Info. If you use the
 // default HTTP handler of this library (see NewHandler) or convert the CheckerResult to JSON on your own,
 // these values will be available in the "info" field.
-func WithInfo(values map[string]interface{}) CheckerOption {
+func WithInfo(values map[string]any) CheckerOption {
 	return func(cfg *checkerConfig) {
 		cfg.systemInfo = values
 	}

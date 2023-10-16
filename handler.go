@@ -80,9 +80,7 @@ func NewHandler(checker Checker, options ...HandlerOption) http.HandlerFunc {
 }
 
 func disableResponseCache(w http.ResponseWriter) {
-	// The response must be explicitly defined as "not cacheable"
-	// to avoid returning an incorrect AvailabilityStatus as a result of caching network equipment.
-	// refer to https://www.ibm.com/garage/method/practices/manage/health-check-apis/
+	// Avoid caching: https://www.ibm.com/garage/method/practices/manage/health-check-apis/
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "-1")
