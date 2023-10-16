@@ -183,8 +183,7 @@ func (ck *defaultChecker) Start() {
 
 		// We run the initial check execution in a separate goroutine so that server startup is not blocked in case of
 		// a bad check that runs for a longer period of time.
-		// TODO: Make this configurable with a useful default
-		go ck.Check(context.Background())
+		go ck.Check(ctx)
 	}
 
 	ck.mtx.Unlock()
