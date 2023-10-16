@@ -273,6 +273,7 @@ func (ck *defaultChecker) startPeriodicChecks(ctx context.Context) {
 
 		if isPeriodicCheck(check) {
 			ck.periodicCheckCount++
+			ck.wg.Add(1)
 
 			// ATTENTION: Access to check and ck.state.CheckState is not synchronized here,
 			// 	assuming that the accessed values are never changed, such as
@@ -284,7 +285,6 @@ func (ck *defaultChecker) startPeriodicChecks(ctx context.Context) {
 			//  - The check state itself is never synchronized on, since the only place where values can be changed are
 			//    within this goroutine.
 			go func() {
-				ck.wg.Add(1)
 				defer ck.wg.Done()
 
 				if check.initialDelay > 0 {
