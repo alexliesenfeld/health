@@ -176,8 +176,8 @@ func (ck *defaultChecker) Start() {
 	defer ck.mtx.Unlock()
 
 	if !ck.started {
-		ctx, cancelFunc := context.WithCancel(context.Background())
-		ck.cancel = cancelFunc
+		ctx, cancel := context.WithCancel(context.Background())
+		ck.cancel = cancel
 
 		ck.started = true
 		defer ck.startPeriodicChecks(ctx)
