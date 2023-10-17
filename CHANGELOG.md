@@ -8,9 +8,6 @@ Instead of returning the error as a string, it is now being returned as an `erro
 - All [`time.Time`](https://pkg.go.dev/time#Time) fields in [`health.CheckState`](https://pkg.go.dev/github.com/alexliesenfeld/health@v0.7.0#CheckState)
   are now values rather than pointers. Use the
 [`IsZero`](https://pkg.go.dev/time#Time.IsZero)-method to check if a value has been set or not instead.
-- Interceptor functions (i.e., `InterceptorFunc`) now have a 
-[`health.CheckState`](https://pkg.go.dev/github.com/alexliesenfeld/health@v0.7.0#CheckState) pointer parameter 
-rather than a value. This allows interceptors to modify the check state prior to check function execution. 
 
 ## 0.7.0
 ### Breaking Changes

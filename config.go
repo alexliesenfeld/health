@@ -196,6 +196,6 @@ func WithInterceptors(interceptors ...Interceptor) CheckerOption {
 // these values will be available in the "info" field.
 func WithInfo(values map[string]any) CheckerOption {
 	return func(cfg *checkerConfig) {
-		cfg.systemInfo = values
+		cfg.info = values
 	}
 }

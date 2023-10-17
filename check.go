@@ -12,7 +12,7 @@ import (
 type (
 	checkerConfig struct {
 		timeout              time.Duration
-		systemInfo           map[string]any
+		info                 map[string]any
 		checks               map[string]*Check
 		cacheTTL             time.Duration
 		statusChangeListener func(context.Context, CheckerState)
@@ -409,7 +409,7 @@ func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 		}
 	}
 
-	return CheckerResult{Status: status, Details: checkResults, Info: ck.cfg.systemInfo}
+	return CheckerResult{Status: status, Details: checkResults, Info: ck.cfg.info}
 }
 
 func isCacheExpired(cacheDuration time.Duration, state *CheckState) bool {
