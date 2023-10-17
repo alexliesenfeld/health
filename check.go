@@ -454,8 +454,8 @@ func executeCheck(
 	// These slices are being passed to this library as configuration parameters, so we don't know how they
 	// are being used otherwise in the users program.
 	interceptors := make([]Interceptor, 0, len(cfg.interceptors)+len(check.Interceptors))
-	copy(interceptors, cfg.interceptors)
-	copy(interceptors[len(cfg.interceptors):], cfg.interceptors)
+	interceptors = append(interceptors, cfg.interceptors...)
+	interceptors = append(interceptors, check.Interceptors...)
 
 	newState = withInterceptors(interceptors, func(ctx context.Context, _ string, state CheckState) CheckState {
 		checkFuncResult := executeCheckFunc(ctx, check)
