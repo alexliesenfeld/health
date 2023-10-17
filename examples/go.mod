@@ -1,6 +1,6 @@
 module github.com/alexliesenfeld/health/examples
 
-go 1.18
+go 1.21
 
 require (
 	github.com/InVisionApp/go-health v2.1.0+incompatible

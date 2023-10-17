@@ -12,7 +12,7 @@ import (
 type (
 	checkerConfig struct {
 		timeout              time.Duration
-		info                 map[string]any
+		info                 map[string]interface{}
 		checks               map[string]*Check
 		cacheTTL             time.Duration
 		statusChangeListener func(context.Context, CheckerState)
@@ -95,7 +95,7 @@ type (
 	// detailed information about the individual checks.
 	CheckerResult struct {
 		// Info contains additional information about this health result.
-		Info map[string]any `json:"info,omitempty"`
+		Info map[string]interface{} `json:"info,omitempty"`
 		// Status is the aggregated system availability status.
 		Status AvailabilityStatus `json:"status"`
 		// Details contains health information for all checked components.

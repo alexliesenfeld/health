@@ -194,7 +194,7 @@ func WithInterceptors(interceptors ...Interceptor) CheckerOption {
 // version number, Git SHA, build date, etc. These values will be available in CheckerResult.Info. If you use the
 // default HTTP handler of this library (see NewHandler) or convert the CheckerResult to JSON on your own,
 // these values will be available in the "info" field.
-func WithInfo(values map[string]any) CheckerOption {
+func WithInfo(values map[string]interface{}) CheckerOption {
 	return func(cfg *checkerConfig) {
 		cfg.info = values
 	}
