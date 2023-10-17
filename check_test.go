@@ -47,58 +47,49 @@ func doTestEvaluateAvailabilityStatus(
 
 func TestWhenNoChecksMadeYetThenStatusUnknown(t *testing.T) {
 	doTestEvaluateAvailabilityStatus(t, StatusUnknown, 0, 0, CheckState{
-		LastCheckedAt: &time.Time{},
+		LastCheckedAt: time.Time{},
 	})
 }
 
 func TestWhenNoErrorThenStatusUp(t *testing.T) {
-	now := time.Now()
 	doTestEvaluateAvailabilityStatus(t, StatusUp, 0, 0, CheckState{
-		LastCheckedAt: &now,
+		LastCheckedAt: time.Now(),
 	})
 }
 
 func TestWhenErrorThenStatusDown(t *testing.T) {
-	now := time.Now()
 	doTestEvaluateAvailabilityStatus(t, StatusDown, 0, 0, CheckState{
-		LastCheckedAt: &now,
+		LastCheckedAt: time.Now(),
 		Result:        fmt.Errorf("example error"),
 	})
 }
 
 func TestWhenErrorAndMaxFailuresThresholdNotCrossedThenStatusWarn(t *testing.T) {
-	now := time.Now()
-	lastSuccessAt := now.Add(-3 * time.Minute)
-
 	doTestEvaluateAvailabilityStatus(t, StatusUp, 1*time.Second, uint(10), CheckState{
-		LastCheckedAt:       &now,
+		LastCheckedAt:       time.Now(),
 		Result:              fmt.Errorf("example error"),
-		FirstCheckStartedAt: now.Add(-2 * time.Minute),
-		LastSuccessAt:       &lastSuccessAt,
+		FirstCheckStartedAt: time.Now().Add(-2 * time.Minute),
+		LastSuccessAt:       time.Now().Add(-3 * time.Minute),
 		ContiguousFails:     1,
 	})
 }
 
 func TestWhenErrorAndMaxTimeInErrorThresholdNotCrossedThenStatusWarn(t *testing.T) {
-	now := time.Now()
-	lastSuccessAt := now.Add(-2 * time.Minute)
 	doTestEvaluateAvailabilityStatus(t, StatusUp, 1*time.Hour, uint(1), CheckState{
-		LastCheckedAt:       &now,
+		LastCheckedAt:       time.Now(),
 		Result:              fmt.Errorf("example error"),
 		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
-		LastSuccessAt:       &lastSuccessAt,
+		LastSuccessAt:       time.Now().Add(-2 * time.Minute),
 		ContiguousFails:     100,
 	})
 }
 
 func TestWhenErrorAndAllThresholdsCrossedThenStatusDown(t *testing.T) {
-	now := time.Now()
-	lastSuccessAt := now.Add(-2 * time.Minute)
 	doTestEvaluateAvailabilityStatus(t, StatusDown, 1*time.Second, uint(1), CheckState{
-		LastCheckedAt:       &now,
+		LastCheckedAt:       time.Now(),
 		Result:              fmt.Errorf("example error"),
 		FirstCheckStartedAt: time.Now().Add(-3 * time.Minute),
-		LastSuccessAt:       &lastSuccessAt,
+		LastSuccessAt:       time.Now().Add(-2 * time.Minute),
 		ContiguousFails:     5,
 	})
 }
@@ -186,5 +177,5 @@ func TestPanicRecovery(t *testing.T) {
 	checkRes, checkResultExists := res.Details["iPanic"]
 	assert.True(t, checkResultExists)
 	assert.NotNil(t, checkRes.Error)
-	assert.Equal(t, *checkRes.Error, expectedPanicMsg)
+	assert.Equal(t, (checkRes.Error).Error(), expectedPanicMsg)
 }

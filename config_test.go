@@ -75,17 +75,6 @@ func TestWithTimeoutStartConfig(t *testing.T) {
 	assert.Equal(t, 5*time.Hour, cfg.timeout)
 }
 
-func TestWithMaxErrorMessageLengthConfig(t *testing.T) {
-	// Arrange
-	cfg := checkerConfig{}
-
-	// Act
-	WithMaxErrorMessageLength(300)(&cfg)
-
-	// Assert
-	assert.Equal(t, uint(300), cfg.maxErrMsgLen)
-}
-
 func TestWithDisabledDetailsConfig(t *testing.T) {
 	// Arrange
 	cfg := checkerConfig{}
@@ -166,7 +155,6 @@ func TestNewWithDefaults(t *testing.T) {
 	ckr := checker.(*defaultChecker)
 	assert.Equal(t, 1*time.Second, ckr.cfg.cacheTTL)
 	assert.Equal(t, 10*time.Second, ckr.cfg.timeout)
-	assert.Equal(t, uint(500), ckr.cfg.maxErrMsgLen)
 	assert.True(t, configApplied)
 }
 
@@ -182,7 +170,6 @@ func TestNewCheckerWithDefaults(t *testing.T) {
 	ckr := checker.(*defaultChecker)
 	assert.Equal(t, 1*time.Second, ckr.cfg.cacheTTL)
 	assert.Equal(t, 10*time.Second, ckr.cfg.timeout)
-	assert.Equal(t, uint(500), ckr.cfg.maxErrMsgLen)
 	assert.True(t, configApplied)
 }
 

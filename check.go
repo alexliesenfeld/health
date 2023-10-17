@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -33,6 +34,12 @@ type (
 	checkResult struct {
 		checkName string
 		newState  CheckState
+	}
+
+	jsonCheckResult struct {
+		Status    string    `json:"status"`
+		Timestamp time.Time `json:"timestamp,omitempty"`
+		Error     string    `json:"error,omitempty"`
 	}
 
 	// Checker is the main checker interface. It provides all health checking logic.
@@ -96,6 +103,12 @@ type (
 	}
 
 	// CheckResult holds a components health information.
+	// Attention: This type is converted from/to JSON using a custom
+	// marshalling/unmarshalling function (see type jsonCheckResult).
+	// This is required because some fields are not converted automatically
+	// by the standard json.Marshal/json.Unmarshal functions
+	// (such as the error interface). The JSON tags you see here, are
+	// just there for the readers' convenience.
 	CheckResult struct {
 		// Status is the availability status of a component.
 		Status AvailabilityStatus `json:"status"`
@@ -118,7 +131,7 @@ type (
 
 	// InterceptorFunc is an interceptor function that intercepts any call to
 	// a components health check function.
-	InterceptorFunc func(ctx context.Context, checkName string, state *CheckState) CheckState
+	InterceptorFunc func(ctx context.Context, checkName string, state CheckState) CheckState
 
 	// AvailabilityStatus expresses the availability of either
 	// a component or the whole system.
@@ -136,6 +149,36 @@ const (
 	// down and not available.
 	StatusDown AvailabilityStatus = "down"
 )
+
+// MarshalJSON provides a custom marshaller for the CheckResult type.
+func (cr CheckResult) MarshalJSON() ([]byte, error) {
+	errorMsg := ""
+	if cr.Error != nil {
+		errorMsg = cr.Error.Error()
+	}
+
+	return json.Marshal(&jsonCheckResult{
+		Status:    string(cr.Status),
+		Timestamp: cr.Timestamp,
+		Error:     errorMsg,
+	})
+}
+
+func (cr *CheckResult) UnmarshalJSON(data []byte) error {
+	var result jsonCheckResult
+	if err := json.Unmarshal(data, &result); err != nil {
+		return err
+	}
+
+	cr.Status = AvailabilityStatus(result.Status)
+	cr.Timestamp = result.Timestamp
+
+	if result.Error != "" {
+		cr.Error = errors.New(result.Error)
+	}
+
+	return nil
+}
 
 func (s AvailabilityStatus) criticality() int {
 	switch s {
@@ -173,7 +216,6 @@ func newChecker(cfg checkerConfig) *defaultChecker {
 // Start implements Checker.Start. Please refer to Checker.Start for more information.
 func (ck *defaultChecker) Start() {
 	ck.mtx.Lock()
-	defer ck.mtx.Unlock()
 
 	if !ck.started {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -186,6 +228,11 @@ func (ck *defaultChecker) Start() {
 		// a bad check that runs for a longer period of time.
 		go ck.Check(ctx)
 	}
+
+	// Attention: We should avoid having this unlock as a deferred function call right after the mutex lock above,
+	// since this may cause a deadlock (e.g., startPeriodicChecks requires the mutex lock as well and would block
+	// because of the defer order)
+	ck.mtx.Unlock()
 }
 
 // Stop implements Checker.Stop. Please refer to Checker.Stop for more information.
@@ -197,6 +244,7 @@ func (ck *defaultChecker) Stop() {
 	defer ck.mtx.Unlock()
 
 	ck.started = false
+	ck.periodicCheckCount = 0
 }
 
 // GetRunningPeriodicCheckCount implements Checker.GetRunningPeriodicCheckCount.
@@ -272,9 +320,6 @@ func (ck *defaultChecker) startPeriodicChecks(ctx context.Context) {
 		check := check
 
 		if isPeriodicCheck(check) {
-			ck.periodicCheckCount++
-			ck.wg.Add(1)
-
 			// ATTENTION: Access to check and ck.state.CheckState is not synchronized here,
 			// 	assuming that the accessed values are never changed, such as
 			//  - ck.state.CheckState[check.Name]
@@ -284,6 +329,10 @@ func (ck *defaultChecker) startPeriodicChecks(ctx context.Context) {
 			// ALSO:
 			//  - The check state itself is never synchronized on, since the only place where values can be changed are
 			//    within this goroutine.
+
+			ck.periodicCheckCount++
+			ck.wg.Add(1)
+
 			go func() {
 				defer ck.wg.Done()
 
@@ -408,10 +457,10 @@ func executeCheck(
 	copy(interceptors, cfg.interceptors)
 	copy(interceptors[len(cfg.interceptors):], cfg.interceptors)
 
-	newState = withInterceptors(interceptors, func(ctx context.Context, _ string, state *CheckState) CheckState {
+	newState = withInterceptors(interceptors, func(ctx context.Context, _ string, state CheckState) CheckState {
 		checkFuncResult := executeCheckFunc(ctx, check)
-		return createNextCheckState(checkFuncResult, check, *state)
-	})(ctx, check.Name, &newState)
+		return createNextCheckState(checkFuncResult, check, state)
+	})(ctx, check.Name, newState)
 
 	if check.StatusListener != nil && oldState.Status != newState.Status {
 		check.StatusListener(ctx, check.Name, newState)
@@ -423,15 +472,14 @@ func executeCheck(
 func executeCheckFunc(ctx context.Context, check *Check) error {
 	// If this channel is not bounded, we may have a goroutine leak (e.g., when ctx.Done signals first then
 	// sending the check result into the channel will block forever).
-	res := make(chan error, 1) // TODO: Check if we need to close this or is automatically closed when out of scope + if closed, if it blocks other goroutines)
+	res := make(chan error, 1)
 
-	// TODO: Check if we need to log something to make it visible to the devs that something in their system fails
-	//	BETTER IDEA: Provide a Panic handler configuration option so developers can decide what to do with panics
-	//	LOOK UP echo panic handler implementation on how to possibly do that
 	go func() {
 		defer func() {
 			if !check.DisablePanicRecovery {
 				if r := recover(); r != nil {
+					// TODO: Provide a configurable panic handler configuration option, so developers can decide
+					// 	what to do with panics.
 					err, ok := r.(error)
 					if ok {
 						res <- err
@@ -442,7 +490,7 @@ func executeCheckFunc(ctx context.Context, check *Check) error {
 			}
 		}()
 
-		res <- check.Check(ctx) // TODO: Check if bounded channel with capacity of 1 is going to be a problem (can we insert two times, creating zombie goroutine)?
+		res <- check.Check(ctx)
 	}()
 
 	select {

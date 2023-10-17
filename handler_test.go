@@ -3,6 +3,7 @@ package health
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -74,13 +75,11 @@ func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatu
 }
 
 func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
-	now := time.Now().UTC()
-	err := "hello"
 	status := CheckerResult{
 		Status: StatusUnknown,
 		Details: map[string]CheckResult{
-			"check1": {Status: StatusDown, Timestamp: &now, Error: &err},
-			"check2": {Status: StatusUp, Timestamp: &now, Error: nil},
+			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: fmt.Errorf("hello")},
+			"check2": {Status: StatusUp, Timestamp: time.Now().UTC(), Error: nil},
 		},
 	}
 
@@ -88,11 +87,10 @@ func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {
 }
 
 func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
-	now := time.Now().UTC()
 	status := CheckerResult{
 		Status: StatusUp,
 		Details: map[string]CheckResult{
-			"check1": {Status: StatusUp, Timestamp: &now, Error: nil},
+			"check1": {Status: StatusUp, Timestamp: time.Now().UTC(), Error: nil},
 		},
 	}
 
@@ -100,12 +98,10 @@ func TestHandlerIfCheckSucceedsThenRespondWithAvailable(t *testing.T) {
 }
 
 func TestHandlerIfAuthFailsThenReturnNoDetails(t *testing.T) {
-	now := time.Now().UTC()
-	err := "an error message"
 	status := CheckerResult{
 		Status: StatusDown,
 		Details: map[string]CheckResult{
-			"check1": {Status: StatusDown, Timestamp: &now, Error: &err},
+			"check1": {Status: StatusDown, Timestamp: time.Now().UTC(), Error: fmt.Errorf("an error message")},
 		},
 	}
 	doTestHandler(t, http.StatusNoContent, http.StatusTeapot, status, http.StatusTeapot)

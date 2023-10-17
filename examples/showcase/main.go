@@ -26,9 +26,6 @@ func main() {
 		health.WithDisabledCache(),
 		health.WithCacheDuration(2*time.Second),
 
-		// Cut error message length.
-		health.WithMaxErrorMessageLength(500),
-
 		// Configure a global timeout that will be applied to all checks.
 		health.WithTimeout(10*time.Second),
 
