@@ -14,7 +14,7 @@ func BasicLogger() health.Interceptor {
 			now := time.Now()
 			result := next(ctx, name, state)
 			log.Printf("executed health check function of component %s in %f seconds (result: %s)",
-				name, time.Now().Sub(now).Seconds(), result.Status)
+				name, time.Since(now).Seconds(), result.Status)
 			return result
 		}
 	}

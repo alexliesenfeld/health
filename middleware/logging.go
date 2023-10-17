@@ -14,7 +14,7 @@ func BasicLogger() health.Middleware {
 			now := time.Now()
 			result := next(r)
 			log.Printf("processed health check request in %f seconds (result: %s)",
-				time.Now().Sub(now).Seconds(), result.Status)
+				time.Since(now).Seconds(), result.Status)
 			return result
 		}
 	}

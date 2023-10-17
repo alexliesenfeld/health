@@ -16,7 +16,7 @@ func main() {
 				Name: "google",
 				Check: func(ctx context.Context) error {
 					deadline, _ := ctx.Deadline()
-					timeout := time.Now().Sub(deadline)
+					timeout := time.Since(deadline)
 					return healthcheck.HTTPGetCheck("https://www.google.com", timeout)()
 				},
 			}),
