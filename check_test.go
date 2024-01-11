@@ -3,10 +3,13 @@ package health
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"sync"
+
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStatusUnknownBeforeStatusUp(t *testing.T) {
@@ -39,10 +42,25 @@ func doTestEvaluateAvailabilityStatus(
 	state CheckState,
 ) {
 	// Act
-	result := evaluateCheckStatus(&state, maxTimeInError, maxFails)
+	result := evaluateCheckStatus(&state, mockEvaluateCheckConfig{maxTimeInError, maxFails})
 
 	// Assert
 	assert.Equal(t, expectedStatus, result)
+}
+
+type mockEvaluateCheckConfig struct {
+	MaxTimeInError time.Duration
+	MaxFails       uint
+}
+
+// maxFails implements evaluateCheckConfig.
+func (c mockEvaluateCheckConfig) maxFails() uint {
+	return c.MaxFails
+}
+
+// maxTimeInError implements evaluateCheckConfig.
+func (c mockEvaluateCheckConfig) maxTimeInError() time.Duration {
+	return c.MaxTimeInError
 }
 
 func TestWhenNoChecksMadeYetThenStatusUnknown(t *testing.T) {
@@ -115,6 +133,11 @@ func TestStartStopManualPeriodicChecks(t *testing.T) {
 
 func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err error, expectedStatus AvailabilityStatus) {
 	// Arrange
+	streamingCheckChange := make(chan struct{})
+	onStreamingCheckChange := sync.OnceFunc(func() {
+		close(streamingCheckChange)
+	})
+
 	ckr := NewChecker(
 		WithTimeout(10*time.Second),
 		WithCheck(Check{
@@ -129,7 +152,40 @@ func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err erro
 				return err
 			},
 		}),
+		WithStreamingCheck(StreamingCheck{
+			Name: "check3",
+			StatusListener: func(ctx context.Context, name string, state CheckState) {
+				onStreamingCheckChange()
+			},
+			MakeCheckStream: func(ctx context.Context) chan error {
+				checkStream := make(chan error)
+				go func() {
+					defer close(checkStream)
+					for {
+						checkStream <- nil
+						select {
+						case <-time.After(updateInterval):
+							continue
+						case <-ctx.Done():
+							checkStream <- ctx.Err()
+							return
+						}
+					}
+				}()
+				return checkStream
+			},
+		}),
 	)
+
+	if updateInterval == 0 {
+		// If the updateInterval is 0,
+		// wait for the streaming check to publish it's first status change
+		// so that the correct status (not Unknown) is received from the next Check call.
+		<-streamingCheckChange
+		// This is not necessary for the periodic check,
+		// since a periodic check with an update interval of 0
+		// is treated exactly like a synchronous check.
+	}
 
 	// Act
 	res := ckr.Check(context.Background())
@@ -137,7 +193,7 @@ func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err erro
 	// Assert
 	require.NotNil(t, res.Details)
 	assert.Equal(t, expectedStatus, res.Status)
-	for _, checkName := range []string{"check1", "check2"} {
+	for _, checkName := range []string{"check1", "check2", "check3"} {
 		_, checkResultExists := res.Details[checkName]
 		assert.True(t, checkResultExists)
 	}

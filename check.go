@@ -14,21 +14,25 @@ type (
 		timeout              time.Duration
 		info                 map[string]interface{}
 		checks               map[string]*Check
+		streamingChecks      map[string]*StreamingCheck
 		cacheTTL             time.Duration
 		statusChangeListener func(context.Context, CheckerState)
 		interceptors         []Interceptor
 		detailsDisabled      bool
 		autostartDisabled    bool
+		rootCtx              context.Context
 	}
 
 	defaultChecker struct {
-		started            bool
-		mtx                sync.Mutex
-		cfg                checkerConfig
-		state              CheckerState
-		wg                 sync.WaitGroup
-		cancel             context.CancelFunc
-		periodicCheckCount int
+		started             bool
+		mtx                 sync.Mutex
+		cfg                 checkerConfig
+		state               CheckerState
+		periodicWg          sync.WaitGroup
+		cancel              context.CancelFunc
+		periodicCheckCount  int
+		streamingCheckCount int
+		streamingWg         sync.WaitGroup
 	}
 
 	checkResult struct {
@@ -200,6 +204,9 @@ func newChecker(cfg checkerConfig) *defaultChecker {
 	for _, check := range cfg.checks {
 		checkState[check.Name] = CheckState{Status: StatusUnknown}
 	}
+	for _, check := range cfg.streamingChecks {
+		checkState[check.Name] = CheckState{Status: StatusUnknown}
+	}
 
 	checker := defaultChecker{
 		cfg:   cfg,
@@ -218,11 +225,12 @@ func (ck *defaultChecker) Start() {
 	ck.mtx.Lock()
 
 	if !ck.started {
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(ck.cfg.rootCtx)
 		ck.cancel = cancel
 
 		ck.started = true
 		defer ck.startPeriodicChecks(ctx)
+		defer ck.startStreamingChecks(ctx)
 
 		// We run the initial check execution in a separate goroutine so that server startup is not blocked in case of
 		// a bad check that runs for a longer period of time.
@@ -238,13 +246,15 @@ func (ck *defaultChecker) Start() {
 // Stop implements Checker.Stop. Please refer to Checker.Stop for more information.
 func (ck *defaultChecker) Stop() {
 	ck.cancel()
-	ck.wg.Wait()
+	ck.periodicWg.Wait()
+	ck.streamingWg.Wait()
 
 	ck.mtx.Lock()
 	defer ck.mtx.Unlock()
 
 	ck.started = false
 	ck.periodicCheckCount = 0
+	ck.streamingCheckCount = 0
 }
 
 // GetRunningPeriodicCheckCount implements Checker.GetRunningPeriodicCheckCount.
@@ -253,6 +263,12 @@ func (ck *defaultChecker) GetRunningPeriodicCheckCount() int {
 	ck.mtx.Lock()
 	defer ck.mtx.Unlock()
 	return ck.periodicCheckCount
+}
+
+func (ck *defaultChecker) GetRunningStreamingCheckCount() int {
+	ck.mtx.Lock()
+	defer ck.mtx.Unlock()
+	return ck.streamingCheckCount
 }
 
 // IsStarted implements Checker.IsStarted. Please refer to Checker.IsStarted for more information.
@@ -311,6 +327,49 @@ func (ck *defaultChecker) runSynchronousChecks(ctx context.Context) {
 	ck.updateState(ctx, results...)
 }
 
+func (ck *defaultChecker) startStreamingChecks(ctx context.Context) {
+	ck.mtx.Lock()
+	defer ck.mtx.Unlock()
+
+	// Start streaming checks.
+	for _, check := range ck.cfg.streamingChecks {
+		check := check
+
+		if isStreamingCheck(check) {
+			ck.streamingCheckCount++
+			ck.streamingWg.Add(1)
+
+			go func() {
+				defer ck.streamingWg.Done()
+
+				checkStream := check.MakeCheckStream(ctx)
+				var checkStreamResult error
+				for {
+					var ok bool
+					select {
+					case checkStreamResult, ok = <-checkStream:
+						if !ok {
+							return
+						}
+					case <-ctx.Done():
+						return
+					}
+
+					oldState := ck.getCheckStateWithLock(check.Name)
+					newState := createNextCheckState(checkStreamResult, check, oldState)
+					if newState.FirstCheckStartedAt.IsZero() {
+						newState.FirstCheckStartedAt = time.Now().UTC()
+					}
+
+					check.onStateChange(ctx, oldState, newState)
+
+					ck.updateStateWithLock(ctx, checkResult{check.Name, newState})
+				}
+			}()
+		}
+	}
+}
+
 func (ck *defaultChecker) startPeriodicChecks(ctx context.Context) {
 	ck.mtx.Lock()
 	defer ck.mtx.Unlock()
@@ -331,10 +390,10 @@ func (ck *defaultChecker) startPeriodicChecks(ctx context.Context) {
 			//    within this goroutine.
 
 			ck.periodicCheckCount++
-			ck.wg.Add(1)
+			ck.periodicWg.Add(1)
 
 			go func() {
-				defer ck.wg.Done()
+				defer ck.periodicWg.Done()
 
 				if check.initialDelay > 0 {
 					if waitForStopSignal(ctx, check.initialDelay) {
@@ -344,9 +403,7 @@ func (ck *defaultChecker) startPeriodicChecks(ctx context.Context) {
 
 				for {
 					withCheckContext(ctx, check, func(ctx context.Context) {
-						ck.mtx.Lock()
-						checkState := ck.state.CheckState[check.Name]
-						ck.mtx.Unlock()
+						checkState := ck.getCheckStateWithLock(check.Name)
 
 						// ATTENTION: This function may panic, if panic handling is disabled
 						// 	via "check.DisablePanicRecovery".
@@ -363,9 +420,7 @@ func (ck *defaultChecker) startPeriodicChecks(ctx context.Context) {
 						//  long-running checks. Hence, the checkState is read-only for interceptors.
 						ctx, checkState = executeCheck(ctx, &ck.cfg, check, checkState)
 
-						ck.mtx.Lock()
-						ck.updateState(ctx, checkResult{check.Name, checkState})
-						ck.mtx.Unlock()
+						ck.updateStateWithLock(ctx, checkResult{check.Name, checkState})
 					})
 
 					if waitForStopSignal(ctx, check.updateInterval) {
@@ -375,6 +430,19 @@ func (ck *defaultChecker) startPeriodicChecks(ctx context.Context) {
 			}()
 		}
 	}
+}
+
+func (ck *defaultChecker) getCheckStateWithLock(checkName string) CheckState {
+	ck.mtx.Lock()
+	checkState := ck.state.CheckState[checkName]
+	ck.mtx.Unlock()
+	return checkState
+}
+
+func (ck *defaultChecker) updateStateWithLock(ctx context.Context, updates ...checkResult) {
+	ck.mtx.Lock()
+	ck.updateState(ctx, updates...)
+	ck.mtx.Unlock()
 }
 
 func (ck *defaultChecker) updateState(ctx context.Context, updates ...checkResult) {
@@ -393,13 +461,21 @@ func (ck *defaultChecker) updateState(ctx context.Context, updates ...checkResul
 func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 	var (
 		checkResults map[string]CheckResult
-		numChecks    = len(ck.cfg.checks)
+		numChecks    = len(ck.cfg.checks) + len(ck.cfg.streamingChecks)
 		status       = ck.state.Status
 	)
 
 	if numChecks > 0 && !ck.cfg.detailsDisabled {
 		checkResults = make(map[string]CheckResult, numChecks)
 		for _, check := range ck.cfg.checks {
+			checkState := ck.state.CheckState[check.Name]
+			checkResults[check.Name] = CheckResult{
+				Status:    checkState.Status,
+				Error:     checkState.Result,
+				Timestamp: checkState.LastCheckedAt,
+			}
+		}
+		for _, check := range ck.cfg.streamingChecks {
 			checkState := ck.state.CheckState[check.Name]
 			checkResults[check.Name] = CheckResult{
 				Status:    checkState.Status,
@@ -418,6 +494,10 @@ func isCacheExpired(cacheDuration time.Duration, state *CheckState) bool {
 
 func isPeriodicCheck(check *Check) bool {
 	return check.updateInterval > 0
+}
+
+func isStreamingCheck(check *StreamingCheck) bool {
+	return check.MakeCheckStream != nil
 }
 
 func waitForStopSignal(ctx context.Context, waitTime time.Duration) bool {
@@ -462,9 +542,7 @@ func executeCheck(
 		return createNextCheckState(checkFuncResult, check, state)
 	})(ctx, check.Name, newState)
 
-	if check.StatusListener != nil && oldState.Status != newState.Status {
-		check.StatusListener(ctx, check.Name, newState)
-	}
+	check.onStateChange(ctx, oldState, newState)
 
 	return ctx, newState
 }
@@ -501,7 +579,12 @@ func executeCheckFunc(ctx context.Context, check *Check) error {
 	}
 }
 
-func createNextCheckState(result error, check *Check, state CheckState) CheckState {
+type evaluateCheckConfig interface {
+	maxTimeInError() time.Duration
+	maxFails() uint
+}
+
+func createNextCheckState(result error, check evaluateCheckConfig, state CheckState) CheckState {
 	now := time.Now().UTC()
 
 	state.Result = result
@@ -515,15 +598,18 @@ func createNextCheckState(result error, check *Check, state CheckState) CheckSta
 		state.LastFailureAt = now
 	}
 
-	state.Status = evaluateCheckStatus(&state, check.MaxTimeInError, check.MaxContiguousFails)
+	state.Status = evaluateCheckStatus(&state, check)
 
 	return state
 }
 
-func evaluateCheckStatus(state *CheckState, maxTimeInError time.Duration, maxFails uint) AvailabilityStatus {
+func evaluateCheckStatus(state *CheckState, config evaluateCheckConfig) AvailabilityStatus {
 	if state.LastCheckedAt.IsZero() {
 		return StatusUnknown
 	} else if state.Result != nil {
+		maxTimeInError := config.maxTimeInError()
+		maxFails := config.maxFails()
+
 		maxTimeInErrorSinceStartPassed := !state.FirstCheckStartedAt.Add(maxTimeInError).After(time.Now())
 		maxTimeInErrorSinceLastSuccessPassed := state.LastSuccessAt.IsZero() ||
 			!state.LastSuccessAt.Add(maxTimeInError).After(time.Now())

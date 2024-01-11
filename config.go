@@ -44,12 +44,64 @@ type (
 		initialDelay   time.Duration
 	}
 
+	// StreamingCheck allows to configure streaming health checks.
+	StreamingCheck struct {
+		// The Name must be unique among all checks. Name is a required attribute.
+		Name string // Required
+
+		// MaxTimeInError will set a duration for how long a service must be
+		// in an error state until it is considered down/unavailable.
+		MaxTimeInError time.Duration // Optional
+
+		// MaxContiguousFails will set a maximum number of contiguous
+		// check fails until the service is considered down/unavailable.
+		MaxContiguousFails uint // Optional
+
+		// StatusListener allows to set a listener that will be called
+		// whenever the AvailabilityStatus (e.g. from "up" to "down").
+		StatusListener func(ctx context.Context, name string, state CheckState) // Optional
+
+		MakeCheckStream func(context.Context) chan error // Required
+	}
+
 	// CheckerOption is a configuration option for a Checker.
 	CheckerOption func(config *checkerConfig)
 
 	// HandlerOption is a configuration option for a Handler (see NewHandler).
 	HandlerOption func(*HandlerConfig)
 )
+
+func (c *StreamingCheck) onStateChange(ctx context.Context, oldState CheckState, newState CheckState) {
+	if c.StatusListener != nil && oldState.Status != newState.Status {
+		c.StatusListener(ctx, c.Name, newState)
+	}
+}
+
+// maxFails implements evaluateCheckConfig.
+func (c *StreamingCheck) maxFails() uint {
+	return c.MaxContiguousFails
+}
+
+// maxTimeInError implements evaluateCheckConfig.
+func (c *StreamingCheck) maxTimeInError() time.Duration {
+	return c.MaxTimeInError
+}
+
+func (c *Check) onStateChange(ctx context.Context, oldState CheckState, newState CheckState) {
+	if c.StatusListener != nil && oldState.Status != newState.Status {
+		c.StatusListener(ctx, c.Name, newState)
+	}
+}
+
+// maxFails implements evaluateCheckConfig.
+func (c *Check) maxFails() uint {
+	return c.MaxContiguousFails
+}
+
+// maxTimeInError implements evaluateCheckConfig.
+func (c *Check) maxTimeInError() time.Duration {
+	return c.MaxTimeInError
+}
 
 // NewChecker creates a new Checker. The provided options will be
 // used to modify its configuration. If the Checker was not yet started
@@ -58,10 +110,12 @@ type (
 // adding the WithDisabledAutostart configuration option.
 func NewChecker(options ...CheckerOption) Checker {
 	cfg := checkerConfig{
-		cacheTTL:     1 * time.Second,
-		timeout:      10 * time.Second,
-		checks:       map[string]*Check{},
-		interceptors: []Interceptor{},
+		cacheTTL:        1 * time.Second,
+		timeout:         10 * time.Second,
+		checks:          map[string]*Check{},
+		streamingChecks: map[string]*StreamingCheck{},
+		interceptors:    []Interceptor{},
+		rootCtx:         context.Background(),
 	}
 
 	for _, opt := range options {
@@ -139,6 +193,14 @@ func WithDisabledAutostart() CheckerOption {
 	}
 }
 
+// WithRootContext sets the root context that will be used for asynchronous checks.
+// Defaults to [context.Background].
+func WithRootContext(ctx context.Context) CheckerOption {
+	return func(cfg *checkerConfig) {
+		cfg.rootCtx = ctx
+	}
+}
+
 // WithDisabledCache disabled the check cache. This is not recommended in most cases.
 // This will effectively lead to a health endpoint that initiates a new health check for each incoming HTTP request.
 // This may have an impact on the systems that are being checked (especially if health checks are expensive).
@@ -177,6 +239,12 @@ func WithPeriodicCheck(refreshPeriod time.Duration, initialDelay time.Duration, 
 		check.updateInterval = refreshPeriod
 		check.initialDelay = initialDelay
 		cfg.checks[check.Name] = &check
+	}
+}
+
+func WithStreamingCheck(check StreamingCheck) CheckerOption {
+	return func(cfg *checkerConfig) {
+		cfg.streamingChecks[check.Name] = &check
 	}
 }
 
