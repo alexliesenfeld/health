@@ -3,13 +3,12 @@ package health
 import (
 	"context"
 	"fmt"
-	"sync"
-
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"testing"
+	"time"
 )
 
 func TestStatusUnknownBeforeStatusUp(t *testing.T) {
@@ -133,10 +132,7 @@ func TestStartStopManualPeriodicChecks(t *testing.T) {
 
 func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err error, expectedStatus AvailabilityStatus) {
 	// Arrange
-	streamingCheckChange := make(chan struct{})
-	onStreamingCheckChange := sync.OnceFunc(func() {
-		close(streamingCheckChange)
-	})
+	checks := make(chan string)
 
 	ckr := NewChecker(
 		WithTimeout(10*time.Second),
@@ -148,43 +144,48 @@ func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err erro
 		}),
 		WithPeriodicCheck(updateInterval, 0, Check{
 			Name: "check2",
+			StatusListener: func(ctx context.Context, name string, state CheckState) {
+				checks <- name
+			},
 			Check: func(ctx context.Context) error {
 				return err
 			},
 		}),
-		WithStreamingCheck(StreamingCheck{
+		WithStreamingCheck(func(input AsyncCheckInput) chan error {
+			checkStream := make(chan error)
+			go func() {
+				defer close(checkStream)
+				for {
+					runInput := input.GetInputForCheck()
+					checkStream <- nil
+					ctx := runInput.Context
+					select {
+					case <-time.After(updateInterval):
+						continue
+					case <-ctx.Done():
+						checkStream <- ctx.Err()
+						return
+					}
+				}
+			}()
+			return checkStream
+		}, BaseCheck{
 			Name: "check3",
 			StatusListener: func(ctx context.Context, name string, state CheckState) {
-				onStreamingCheckChange()
-			},
-			MakeCheckStream: func(ctx context.Context) chan error {
-				checkStream := make(chan error)
-				go func() {
-					defer close(checkStream)
-					for {
-						checkStream <- nil
-						select {
-						case <-time.After(updateInterval):
-							continue
-						case <-ctx.Done():
-							checkStream <- ctx.Err()
-							return
-						}
-					}
-				}()
-				return checkStream
+				checks <- name
 			},
 		}),
 	)
 
 	if updateInterval == 0 {
-		// If the updateInterval is 0,
-		// wait for the streaming check to publish it's first status change
-		// so that the correct status (not Unknown) is received from the next Check call.
-		<-streamingCheckChange
-		// This is not necessary for the periodic check,
-		// since a periodic check with an update interval of 0
-		// is treated exactly like a synchronous check.
+		// if update interval is 0, wait for first update from each async check
+		namesUpdates := map[string]bool{}
+		for check := range checks {
+			namesUpdates[check] = true
+			if len(namesUpdates) == 2 {
+				break
+			}
+		}
 	}
 
 	// Act

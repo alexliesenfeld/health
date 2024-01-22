@@ -10,11 +10,19 @@ import (
 )
 
 type (
+	asyncCheck interface {
+		evaluateCheckConfig
+		name() string
+		interceptors() []Interceptor
+		start(AsyncCheckInput) chan error
+		onStateChange(ctx context.Context, oldState CheckState, newState CheckState)
+	}
+
 	checkerConfig struct {
 		timeout              time.Duration
 		info                 map[string]interface{}
-		checks               map[string]*Check
-		streamingChecks      map[string]*StreamingCheck
+		syncChecks           map[string]*Check
+		asyncChecks          map[string]asyncCheck
 		cacheTTL             time.Duration
 		statusChangeListener func(context.Context, CheckerState)
 		interceptors         []Interceptor
@@ -24,15 +32,14 @@ type (
 	}
 
 	defaultChecker struct {
-		started             bool
-		mtx                 sync.Mutex
-		cfg                 checkerConfig
-		state               CheckerState
-		periodicWg          sync.WaitGroup
-		cancel              context.CancelFunc
-		periodicCheckCount  int
-		streamingCheckCount int
-		streamingWg         sync.WaitGroup
+		started            bool
+		startedAndCountMtx sync.RWMutex
+		checkStateMtx      sync.RWMutex
+		cfg                checkerConfig
+		state              CheckerState
+		cancel             context.CancelFunc
+		asyncCheckCount    int
+		asyncWg            sync.WaitGroup
 	}
 
 	checkResult struct {
@@ -201,11 +208,11 @@ var (
 
 func newChecker(cfg checkerConfig) *defaultChecker {
 	checkState := map[string]CheckState{}
-	for _, check := range cfg.checks {
+	for _, check := range cfg.syncChecks {
 		checkState[check.Name] = CheckState{Status: StatusUnknown}
 	}
-	for _, check := range cfg.streamingChecks {
-		checkState[check.Name] = CheckState{Status: StatusUnknown}
+	for _, check := range cfg.asyncChecks {
+		checkState[check.name()] = CheckState{Status: StatusUnknown}
 	}
 
 	checker := defaultChecker{
@@ -222,15 +229,14 @@ func newChecker(cfg checkerConfig) *defaultChecker {
 
 // Start implements Checker.Start. Please refer to Checker.Start for more information.
 func (ck *defaultChecker) Start() {
-	ck.mtx.Lock()
+	ck.startedAndCountMtx.Lock()
 
 	if !ck.started {
 		ctx, cancel := context.WithCancel(ck.cfg.rootCtx)
 		ck.cancel = cancel
 
 		ck.started = true
-		defer ck.startPeriodicChecks(ctx)
-		defer ck.startStreamingChecks(ctx)
+		defer ck.startAsyncChecks(ctx)
 
 		// We run the initial check execution in a separate goroutine so that server startup is not blocked in case of
 		// a bad check that runs for a longer period of time.
@@ -240,48 +246,45 @@ func (ck *defaultChecker) Start() {
 	// Attention: We should avoid having this unlock as a deferred function call right after the mutex lock above,
 	// since this may cause a deadlock (e.g., startPeriodicChecks requires the mutex lock as well and would block
 	// because of the defer order)
-	ck.mtx.Unlock()
+	ck.startedAndCountMtx.Unlock()
 }
 
 // Stop implements Checker.Stop. Please refer to Checker.Stop for more information.
 func (ck *defaultChecker) Stop() {
 	ck.cancel()
-	ck.periodicWg.Wait()
-	ck.streamingWg.Wait()
+	ck.asyncWg.Wait()
 
-	ck.mtx.Lock()
-	defer ck.mtx.Unlock()
+	ck.startedAndCountMtx.Lock()
+	defer ck.startedAndCountMtx.Unlock()
 
 	ck.started = false
-	ck.periodicCheckCount = 0
-	ck.streamingCheckCount = 0
+	ck.asyncCheckCount = 0
 }
 
 // GetRunningPeriodicCheckCount implements Checker.GetRunningPeriodicCheckCount.
 // Please refer to Checker.GetRunningPeriodicCheckCount for more information.
+//
+// Deprecated: Use GetRunningAsyncCheckCount.
 func (ck *defaultChecker) GetRunningPeriodicCheckCount() int {
-	ck.mtx.Lock()
-	defer ck.mtx.Unlock()
-	return ck.periodicCheckCount
+	return ck.GetRunningAsyncCheckCount()
 }
-
-func (ck *defaultChecker) GetRunningStreamingCheckCount() int {
-	ck.mtx.Lock()
-	defer ck.mtx.Unlock()
-	return ck.streamingCheckCount
+func (ck *defaultChecker) GetRunningAsyncCheckCount() int {
+	ck.startedAndCountMtx.RLock()
+	defer ck.startedAndCountMtx.RUnlock()
+	return ck.asyncCheckCount
 }
 
 // IsStarted implements Checker.IsStarted. Please refer to Checker.IsStarted for more information.
 func (ck *defaultChecker) IsStarted() bool {
-	ck.mtx.Lock()
-	defer ck.mtx.Unlock()
+	ck.startedAndCountMtx.RLock()
+	defer ck.startedAndCountMtx.RUnlock()
 	return ck.started
 }
 
 // Check implements Checker.Check. Please refer to Checker.Check for more information.
 func (ck *defaultChecker) Check(ctx context.Context) CheckerResult {
-	ck.mtx.Lock()
-	defer ck.mtx.Unlock()
+	ck.checkStateMtx.Lock()
+	defer ck.checkStateMtx.Unlock()
 
 	ctx, cancel := context.WithTimeout(ctx, ck.cfg.timeout)
 	defer cancel()
@@ -293,30 +296,28 @@ func (ck *defaultChecker) Check(ctx context.Context) CheckerResult {
 
 func (ck *defaultChecker) runSynchronousChecks(ctx context.Context) {
 	var (
-		numChecks          = len(ck.cfg.checks)
+		numChecks          = len(ck.cfg.syncChecks)
 		numInitiatedChecks = 0
 		resChan            = make(chan checkResult, numChecks)
 	)
 
-	for _, check := range ck.cfg.checks {
+	for _, check := range ck.cfg.syncChecks {
 		check := check
 
-		if !isPeriodicCheck(check) {
-			checkState := ck.state.CheckState[check.Name]
+		checkState := ck.state.CheckState[check.Name]
 
-			if !isCacheExpired(ck.cfg.cacheTTL, &checkState) {
-				continue
-			}
-
-			numInitiatedChecks++
-
-			go func() {
-				withCheckContext(ctx, check, func(ctx context.Context) {
-					_, checkState := executeCheck(ctx, &ck.cfg, check, checkState)
-					resChan <- checkResult{check.Name, checkState}
-				})
-			}()
+		if !isCacheExpired(ck.cfg.cacheTTL, &checkState) {
+			continue
 		}
+
+		numInitiatedChecks++
+
+		go func() {
+			withCheckContext(ctx, check, func(ctx context.Context) {
+				_, checkState := executeCheck(ctx, &ck.cfg, check, checkState)
+				resChan <- checkResult{check.Name, checkState}
+			})
+		}()
 	}
 
 	results := make([]checkResult, 0, numInitiatedChecks)
@@ -327,122 +328,98 @@ func (ck *defaultChecker) runSynchronousChecks(ctx context.Context) {
 	ck.updateState(ctx, results...)
 }
 
-func (ck *defaultChecker) startStreamingChecks(ctx context.Context) {
-	ck.mtx.Lock()
-	defer ck.mtx.Unlock()
+func (ck *defaultChecker) startAsyncChecks(ctx context.Context) {
+	ck.startedAndCountMtx.Lock()
+	defer ck.startedAndCountMtx.Unlock()
 
 	// Start streaming checks.
-	for _, check := range ck.cfg.streamingChecks {
+	for _, check := range ck.cfg.asyncChecks {
 		check := check
 
-		if isStreamingCheck(check) {
-			ck.streamingCheckCount++
-			ck.streamingWg.Add(1)
+		// ATTENTION: Access to check and ck.state.CheckState is not synchronized here,
+		// 	assuming that the accessed values are never changed, such as
+		//  - ck.state.CheckState[check.Name]
+		//  - check object itself (there will never be a new Check object created for the configured check)
+		//	- check.updateInterval (used by isPeriodicCheck)
+		//  - check.initialDelay
+		// ALSO:
+		//  - The check state itself is never synchronized on, since the only place where values can be changed are
+		//    within this goroutine.
 
-			go func() {
-				defer ck.streamingWg.Done()
+		ck.asyncCheckCount++
+		ck.asyncWg.Add(1)
 
-				checkStream := check.MakeCheckStream(ctx)
-				var checkStreamResult error
-				for {
-					var ok bool
-					select {
-					case checkStreamResult, ok = <-checkStream:
-						if !ok {
-							return
-						}
-					case <-ctx.Done():
-						return
+		go func() {
+			defer ck.asyncWg.Done()
+
+			input := newAsyncCheckInput(ctx)
+			checksChannel := check.start(input)
+
+			for {
+				oldState := ck.getCheckStateWithLock(check.name())
+				newState := oldState
+
+				// We copy explicitly to not affect the underlying array of the slices as a side effect.
+				// These slices are being passed to this library as configuration parameters, so we don't know how they
+				// are being used otherwise in the users program.
+				interceptors := make([]Interceptor, 0, len(ck.cfg.interceptors)+len(check.interceptors()))
+				interceptors = append(interceptors, ck.cfg.interceptors...)
+				interceptors = append(interceptors, check.interceptors()...)
+
+				// ATTENTION: executeCheck is executed with its own copy of the checks
+				// 	state (see checkState above). This means that if there is a global status
+				//	listener that is configured by the user with health.WithStatusListener,
+				//	and that global status listener changes this checks state as long as
+				//  executeCheck is running, the modifications made by the global listener
+				//  will be lost after the function completes, since we overwrite the state
+				//  below using updateState.
+				//  This means that global listeners should not change the checks state
+				//  or accept losing their updates. This will be the case especially for
+				//  long-running checks. Hence, the checkState is read-only for interceptors.
+
+				newState = withInterceptors(interceptors, func(ctx context.Context, _ string, state CheckState) CheckState {
+					input.updateStateForNextCheck(ctx, state)
+					checkStreamResult, ok := receiveOnCheckChannel(ctx, checksChannel)
+					if !ok {
+						return state
 					}
-
-					oldState := ck.getCheckStateWithLock(check.Name)
 					newState := createNextCheckState(checkStreamResult, check, oldState)
-					if newState.FirstCheckStartedAt.IsZero() {
-						newState.FirstCheckStartedAt = time.Now().UTC()
-					}
+					newState.FirstCheckStartedAt = input.firstCheckStartedAt
+					return newState
+				})(ctx, check.name(), newState)
 
-					check.onStateChange(ctx, oldState, newState)
-
-					ck.updateStateWithLock(ctx, checkResult{check.Name, newState})
+				if ctx.Err() != nil {
+					// stop looping if context ended
+					return
 				}
-			}()
-		}
+
+				ck.updateStateWithLock(ctx, checkResult{check.name(), newState})
+				check.onStateChange(ctx, oldState, newState)
+			}
+		}()
 	}
 }
 
-func (ck *defaultChecker) startPeriodicChecks(ctx context.Context) {
-	ck.mtx.Lock()
-	defer ck.mtx.Unlock()
-
-	// Start periodic checks.
-	for _, check := range ck.cfg.checks {
-		check := check
-
-		if isPeriodicCheck(check) {
-			// ATTENTION: Access to check and ck.state.CheckState is not synchronized here,
-			// 	assuming that the accessed values are never changed, such as
-			//  - ck.state.CheckState[check.Name]
-			//  - check object itself (there will never be a new Check object created for the configured check)
-			//	- check.updateInterval (used by isPeriodicCheck)
-			//  - check.initialDelay
-			// ALSO:
-			//  - The check state itself is never synchronized on, since the only place where values can be changed are
-			//    within this goroutine.
-
-			ck.periodicCheckCount++
-			ck.periodicWg.Add(1)
-
-			go func() {
-				defer ck.periodicWg.Done()
-
-				if check.initialDelay > 0 {
-					if waitForStopSignal(ctx, check.initialDelay) {
-						return
-					}
-				}
-
-				for {
-					withCheckContext(ctx, check, func(ctx context.Context) {
-						checkState := ck.getCheckStateWithLock(check.Name)
-
-						// ATTENTION: This function may panic, if panic handling is disabled
-						// 	via "check.DisablePanicRecovery".
-						//
-						// ATTENTION: executeCheck is executed with its own copy of the checks
-						// 	state (see checkState above). This means that if there is a global status
-						//	listener that is configured by the user with health.WithStatusListener,
-						//	and that global status listener changes this checks state as long as
-						//  executeCheck is running, the modifications made by the global listener
-						//  will be lost after the function completes, since we overwrite the state
-						//  below using updateState.
-						//  This means that global listeners should not change the checks state
-						//  or accept losing their updates. This will be the case especially for
-						//  long-running checks. Hence, the checkState is read-only for interceptors.
-						ctx, checkState = executeCheck(ctx, &ck.cfg, check, checkState)
-
-						ck.updateStateWithLock(ctx, checkResult{check.Name, checkState})
-					})
-
-					if waitForStopSignal(ctx, check.updateInterval) {
-						return
-					}
-				}
-			}()
-		}
+func receiveOnCheckChannel(ctx context.Context, checksChannel chan error) (checkStreamResult error, ok bool) {
+	select {
+	case checkStreamResult, ok := <-checksChannel:
+		return checkStreamResult, ok
+	case <-ctx.Done():
+		return nil, false
 	}
 }
 
 func (ck *defaultChecker) getCheckStateWithLock(checkName string) CheckState {
-	ck.mtx.Lock()
+	ck.checkStateMtx.RLock()
+	defer ck.checkStateMtx.RUnlock()
 	checkState := ck.state.CheckState[checkName]
-	ck.mtx.Unlock()
 	return checkState
 }
 
 func (ck *defaultChecker) updateStateWithLock(ctx context.Context, updates ...checkResult) {
-	ck.mtx.Lock()
+	ck.checkStateMtx.Lock()
+	defer ck.checkStateMtx.Unlock()
 	ck.updateState(ctx, updates...)
-	ck.mtx.Unlock()
 }
 
 func (ck *defaultChecker) updateState(ctx context.Context, updates ...checkResult) {
@@ -461,13 +438,13 @@ func (ck *defaultChecker) updateState(ctx context.Context, updates ...checkResul
 func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 	var (
 		checkResults map[string]CheckResult
-		numChecks    = len(ck.cfg.checks) + len(ck.cfg.streamingChecks)
+		numChecks    = len(ck.cfg.syncChecks) + len(ck.cfg.asyncChecks)
 		status       = ck.state.Status
 	)
 
 	if numChecks > 0 && !ck.cfg.detailsDisabled {
 		checkResults = make(map[string]CheckResult, numChecks)
-		for _, check := range ck.cfg.checks {
+		for _, check := range ck.cfg.syncChecks {
 			checkState := ck.state.CheckState[check.Name]
 			checkResults[check.Name] = CheckResult{
 				Status:    checkState.Status,
@@ -475,9 +452,9 @@ func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 				Timestamp: checkState.LastCheckedAt,
 			}
 		}
-		for _, check := range ck.cfg.streamingChecks {
-			checkState := ck.state.CheckState[check.Name]
-			checkResults[check.Name] = CheckResult{
+		for _, check := range ck.cfg.asyncChecks {
+			checkState := ck.state.CheckState[check.name()]
+			checkResults[check.name()] = CheckResult{
 				Status:    checkState.Status,
 				Error:     checkState.Result,
 				Timestamp: checkState.LastCheckedAt,
@@ -490,14 +467,6 @@ func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 
 func isCacheExpired(cacheDuration time.Duration, state *CheckState) bool {
 	return state.LastCheckedAt.IsZero() || state.LastCheckedAt.Before(time.Now().Add(-cacheDuration))
-}
-
-func isPeriodicCheck(check *Check) bool {
-	return check.updateInterval > 0
-}
-
-func isStreamingCheck(check *StreamingCheck) bool {
-	return check.MakeCheckStream != nil
 }
 
 func waitForStopSignal(ctx context.Context, waitTime time.Duration) bool {

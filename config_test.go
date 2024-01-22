@@ -14,31 +14,33 @@ import (
 func TestWithPeriodicCheckConfig(t *testing.T) {
 	// Arrange
 	expectedName := "test"
-	cfg := checkerConfig{checks: map[string]*Check{}}
+	cfg := checkerConfig{syncChecks: map[string]*Check{}, asyncChecks: map[string]asyncCheck{}}
 	interval := 5 * time.Second
 	initialDelay := 1 * time.Minute
-	check := Check{Name: expectedName, updateInterval: interval, initialDelay: initialDelay}
+	check := Check{Name: expectedName}
 
 	// Act
 	WithPeriodicCheck(interval, initialDelay, check)(&cfg)
 
 	// Assert
-	assert.Equal(t, 1, len(cfg.checks))
-	assert.True(t, reflect.DeepEqual(check, *cfg.checks[expectedName]))
+	assert.Equal(t, 1, len(cfg.asyncChecks))
+	if p, ok := cfg.asyncChecks[expectedName].(*periodicCheck); assert.True(t, ok) {
+		assert.True(t, reflect.DeepEqual(check, p.Check))
+	}
 }
 
 func TestWithCheckConfig(t *testing.T) {
 	// Arrange
 	expectedName := "test"
-	cfg := checkerConfig{checks: map[string]*Check{}}
+	cfg := checkerConfig{syncChecks: map[string]*Check{}}
 	check := Check{Name: "test"}
 
 	// Act
 	WithCheck(check)(&cfg)
 
 	// Assert
-	require.Equal(t, 1, len(cfg.checks))
-	assert.True(t, reflect.DeepEqual(&check, cfg.checks[expectedName]))
+	require.Equal(t, 1, len(cfg.syncChecks))
+	assert.True(t, reflect.DeepEqual(&check, cfg.syncChecks[expectedName]))
 }
 
 func TestWithCacheDurationConfig(t *testing.T) {
