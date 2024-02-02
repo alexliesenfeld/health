@@ -6,6 +6,8 @@ import (
 )
 
 type (
+	StatusListenerFunc func(ctx context.Context, name string, state CheckState)
+
 	// Check allows to configure health checks.
 	Check struct {
 		// The Name must be unique among all checks. Name is a required attribute.
@@ -30,7 +32,7 @@ type (
 
 		// StatusListener allows to set a listener that will be called
 		// whenever the AvailabilityStatus (e.g. from "up" to "down").
-		StatusListener func(ctx context.Context, name string, state CheckState) // Optional
+		StatusListener StatusListenerFunc // Optional
 
 		// Interceptors holds a list of Interceptor instances that will be executed one after another in the
 		// order as they appear in the list.
@@ -39,9 +41,41 @@ type (
 		// DisablePanicRecovery disables automatic recovery from panics. If left in its default value (false),
 		// panics will be automatically converted into errors instead.
 		DisablePanicRecovery bool
+	}
 
+	// periodicCheck allows to configure periodic health checks.
+	periodicCheck struct {
+		Check
 		updateInterval time.Duration
 		initialDelay   time.Duration
+	}
+
+	// streamingCheck allows to configure streaming health checks.
+	streamingCheck struct {
+		BaseCheck
+		makeCheckStream func(AsyncCheckInput) chan error
+	}
+
+	// BaseCheck allows to configure all health checks.
+	BaseCheck struct {
+		// The Name must be unique among all checks. Name is a required attribute.
+		Name string // Required
+
+		// MaxTimeInError will set a duration for how long a service must be
+		// in an error state until it is considered down/unavailable.
+		MaxTimeInError time.Duration // Optional
+
+		// MaxContiguousFails will set a maximum number of contiguous
+		// check fails until the service is considered down/unavailable.
+		MaxContiguousFails uint // Optional
+
+		// StatusListener allows to set a listener that will be called
+		// whenever the AvailabilityStatus (e.g. from "up" to "down").
+		StatusListener StatusListenerFunc // Optional
+
+		// Interceptors holds a list of Interceptor instances that will be executed one after another in the
+		// order as they appear in the list.
+		Interceptors []Interceptor
 	}
 
 	// CheckerOption is a configuration option for a Checker.
@@ -50,6 +84,12 @@ type (
 	// HandlerOption is a configuration option for a Handler (see NewHandler).
 	HandlerOption func(*HandlerConfig)
 )
+
+func (f StatusListenerFunc) onStateChange(ctx context.Context, checkName string, oldState CheckState, newState CheckState) {
+	if f != nil && oldState.Status != newState.Status {
+		f(ctx, checkName, newState)
+	}
+}
 
 // NewChecker creates a new Checker. The provided options will be
 // used to modify its configuration. If the Checker was not yet started
@@ -60,8 +100,10 @@ func NewChecker(options ...CheckerOption) Checker {
 	cfg := checkerConfig{
 		cacheTTL:     1 * time.Second,
 		timeout:      10 * time.Second,
-		checks:       map[string]*Check{},
+		syncChecks:   map[string]*Check{},
+		asyncChecks:  map[string]asyncCheck{},
 		interceptors: []Interceptor{},
+		rootCtx:      context.Background(),
 	}
 
 	for _, opt := range options {
@@ -139,6 +181,14 @@ func WithDisabledAutostart() CheckerOption {
 	}
 }
 
+// WithRootContext sets the root context that will be used for asynchronous checks.
+// Defaults to [context.Background].
+func WithRootContext(ctx context.Context) CheckerOption {
+	return func(cfg *checkerConfig) {
+		cfg.rootCtx = ctx
+	}
+}
+
 // WithDisabledCache disabled the check cache. This is not recommended in most cases.
 // This will effectively lead to a health endpoint that initiates a new health check for each incoming HTTP request.
 // This may have an impact on the systems that are being checked (especially if health checks are expensive).
@@ -163,7 +213,7 @@ func WithCacheDuration(duration time.Duration) CheckerOption {
 // consider using WithPeriodicCheck instead.
 func WithCheck(check Check) CheckerOption {
 	return func(cfg *checkerConfig) {
-		cfg.checks[check.Name] = &check
+		cfg.syncChecks[check.Name] = &check
 	}
 }
 
@@ -174,9 +224,20 @@ func WithCheck(check Check) CheckerOption {
 // This way Checker.Check (and the health endpoint) always returns the last result of the periodic check.
 func WithPeriodicCheck(refreshPeriod time.Duration, initialDelay time.Duration, check Check) CheckerOption {
 	return func(cfg *checkerConfig) {
-		check.updateInterval = refreshPeriod
-		check.initialDelay = initialDelay
-		cfg.checks[check.Name] = &check
+		cfg.asyncChecks[check.Name] = &periodicCheck{
+			Check:          check,
+			updateInterval: refreshPeriod,
+			initialDelay:   initialDelay,
+		}
+	}
+}
+
+func WithStreamingCheck(makeCheckStream func(AsyncCheckInput) chan error, check BaseCheck) CheckerOption {
+	return func(cfg *checkerConfig) {
+		cfg.asyncChecks[check.Name] = &streamingCheck{
+			BaseCheck:       check,
+			makeCheckStream: makeCheckStream,
+		}
 	}
 }
 

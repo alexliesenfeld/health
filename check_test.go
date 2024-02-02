@@ -3,8 +3,10 @@ package health
 import (
 	"context"
 	"fmt"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"testing"
 	"time"
 )
@@ -39,10 +41,25 @@ func doTestEvaluateAvailabilityStatus(
 	state CheckState,
 ) {
 	// Act
-	result := evaluateCheckStatus(&state, maxTimeInError, maxFails)
+	result := evaluateCheckStatus(&state, mockEvaluateCheckConfig{maxTimeInError, maxFails})
 
 	// Assert
 	assert.Equal(t, expectedStatus, result)
+}
+
+type mockEvaluateCheckConfig struct {
+	MaxTimeInError time.Duration
+	MaxFails       uint
+}
+
+// maxFails implements evaluateCheckConfig.
+func (c mockEvaluateCheckConfig) maxFails() uint {
+	return c.MaxFails
+}
+
+// maxTimeInError implements evaluateCheckConfig.
+func (c mockEvaluateCheckConfig) maxTimeInError() time.Duration {
+	return c.MaxTimeInError
 }
 
 func TestWhenNoChecksMadeYetThenStatusUnknown(t *testing.T) {
@@ -115,6 +132,8 @@ func TestStartStopManualPeriodicChecks(t *testing.T) {
 
 func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err error, expectedStatus AvailabilityStatus) {
 	// Arrange
+	checks := make(chan string)
+
 	ckr := NewChecker(
 		WithTimeout(10*time.Second),
 		WithCheck(Check{
@@ -125,11 +144,49 @@ func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err erro
 		}),
 		WithPeriodicCheck(updateInterval, 0, Check{
 			Name: "check2",
+			StatusListener: func(ctx context.Context, name string, state CheckState) {
+				checks <- name
+			},
 			Check: func(ctx context.Context) error {
 				return err
 			},
 		}),
+		WithStreamingCheck(func(input AsyncCheckInput) chan error {
+			checkStream := make(chan error)
+			go func() {
+				defer close(checkStream)
+				for {
+					runInput := input.GetInputForCheck()
+					checkStream <- nil
+					ctx := runInput.Context
+					select {
+					case <-time.After(updateInterval):
+						continue
+					case <-ctx.Done():
+						checkStream <- ctx.Err()
+						return
+					}
+				}
+			}()
+			return checkStream
+		}, BaseCheck{
+			Name: "check3",
+			StatusListener: func(ctx context.Context, name string, state CheckState) {
+				checks <- name
+			},
+		}),
 	)
+
+	if updateInterval == 0 {
+		// if update interval is 0, wait for first update from each async check
+		namesUpdates := map[string]bool{}
+		for check := range checks {
+			namesUpdates[check] = true
+			if len(namesUpdates) == 2 {
+				break
+			}
+		}
+	}
 
 	// Act
 	res := ckr.Check(context.Background())
@@ -137,7 +194,7 @@ func doTestCheckerCheckFunc(t *testing.T, updateInterval time.Duration, err erro
 	// Assert
 	require.NotNil(t, res.Details)
 	assert.Equal(t, expectedStatus, res.Status)
-	for _, checkName := range []string{"check1", "check2"} {
+	for _, checkName := range []string{"check1", "check2", "check3"} {
 		_, checkResultExists := res.Details[checkName]
 		assert.True(t, checkResultExists)
 	}
