@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 type (
@@ -78,6 +80,24 @@ func NewHandler(checker Checker, options ...HandlerOption) http.HandlerFunc {
 		//nolint:errcheck
 		cfg.resultWriter.Write(&result, statusCode, w, r)
 	}
+}
+
+// NewHandlerEcho creates a new health check handler compatible with
+// the Echo framework, version 4.x.
+func NewHandlerEcho(ctx echo.Context, checker Checker, options ...HandlerOption) error {
+	cfg := createConfig(options)
+
+	// Do the check (with configured middleware)
+	result := withMiddleware(cfg.middleware, func(r *http.Request) CheckerResult {
+		return checker.Check(r.Context())
+	})(ctx.Request())
+
+	// Write HTTP response
+	disableResponseCache(ctx.Response().Writer)
+	statusCode := mapHTTPStatusCode(result.Status, cfg.statusCodeUp, cfg.statusCodeDown)
+	//nolint:errcheck
+	return ctx.JSON(statusCode, &result)
+
 }
 
 func disableResponseCache(w http.ResponseWriter) {
