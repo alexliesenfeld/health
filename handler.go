@@ -81,6 +81,7 @@ func NewHandler(checker Checker, options ...HandlerOption) http.HandlerFunc {
 	}
 }
 
+// NewHandlerEcho creates a new health check handler that compatible with echo v4.
 func NewHandlerEcho(ctx echo.Context, checker Checker, options ...HandlerOption) error {
 	cfg := createConfig(options)
 
