@@ -207,3 +207,16 @@ func TestCheckerAutostartDisabledConfig(t *testing.T) {
 	// Assert
 	assert.False(t, c.IsStarted())
 }
+
+func TestWithChecks(t *testing.T) {
+	// Arrange
+	check := Check{Name: "test"}
+
+	// Act
+	checker := NewChecker(WithChecks(check))
+
+	// Assert
+	ckr := checker.(*defaultChecker)
+	assert.Len(t, ckr.cfg.checks, 1)
+	assert.Contains(t, ckr.cfg.checks, check.Name)
+}
