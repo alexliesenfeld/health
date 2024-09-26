@@ -562,7 +562,7 @@ func withInterceptors(interceptors []Interceptor, target InterceptorFunc) Interc
 	return chain
 }
 
-func createInfoMap(infoMap map[string]any, infoFuncs []func(map[string]any)) map[string]any {
+func createInfoMap(infoMap map[string]interface{}, infoFuncs []func(map[string]interface{})) map[string]interface{} {
 	// TODO: This solution will always create a new map and hence unnecessarily use the heap
 	// 	(since the map we return will escape to the heap during escape analysis because the
 	//	  size is unknown at compile time). This may be improved by using a check specific
@@ -574,10 +574,10 @@ func createInfoMap(infoMap map[string]any, infoFuncs []func(map[string]any)) map
 		return infoMap
 	}
 
-	var target map[string]any
+	var target map[string]interface{}
 
 	if len(infoMap) > 0 {
-		target = make(map[string]any)
+		target = make(map[string]interface{})
 
 		for _, infoFunc := range infoFuncs {
 			infoFunc(target)

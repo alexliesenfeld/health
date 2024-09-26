@@ -218,7 +218,7 @@ func WithInfo(values map[string]interface{}) CheckerOption {
 // Values added by these functions will still be available in CheckerResult.Info and reflected in the
 // "info" field if you are using the default HTTP handler (see NewHandler) or converting CheckerResult to JSON.
 // The functions will be executed in order.
-func WithInfoFunc(infoFuncs ...func(info map[string]any)) CheckerOption {
+func WithInfoFunc(infoFuncs ...func(info map[string]interface{})) CheckerOption {
 	return func(cfg *checkerConfig) {
 		cfg.infoFuncs = infoFuncs
 	}
