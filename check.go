@@ -565,10 +565,10 @@ func withInterceptors(interceptors []Interceptor, target InterceptorFunc) Interc
 func createInfoMap(infoMap map[string]interface{}, infoFuncs []func(map[string]interface{})) map[string]interface{} {
 	// TODO: This solution will always create a new map and hence unnecessarily use the heap
 	// 	(since the map we return will escape to the heap during escape analysis because the
-	//	  size is unknown at compile time). This may be improved by using a check specific
-	//		map that is recycled, so that allocated heap is not wasted and may be reused
-	//			from check execution to check execution (e.g., by cleaning it up after
-	//				the execution using delete(checkSpecificMap, key).
+	//  size is unknown at compile time). This may be improved by using a check specific
+	//  map that is recycled, so that allocated heap is not wasted and may be reused
+	//  from check execution to check execution (e.g., by cleaning it up after
+	//  the execution using delete(checkSpecificMap, key).
 
 	if len(infoFuncs) == 0 {
 		return infoMap
