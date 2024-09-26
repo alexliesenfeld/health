@@ -166,7 +166,9 @@ func WithCheck(check Check) CheckerOption {
 }
 
 // WithChecks adds a list of health checks that contribute to the overall service availability status.
-// see. WithCheck for more information.
+// These checks will be triggered each time Checker.Check is called (i.e., for each HTTP request).
+// If health checks are expensive, or you expect a higher amount of requests on the health endpoint,
+// consider using WithPeriodicCheck instead.
 func WithChecks(checks ...Check) CheckerOption {
 	return func(cfg *checkerConfig) {
 		for i := range checks {
@@ -205,5 +207,19 @@ func WithInterceptors(interceptors ...Interceptor) CheckerOption {
 func WithInfo(values map[string]interface{}) CheckerOption {
 	return func(cfg *checkerConfig) {
 		cfg.info = values
+	}
+}
+
+// WithInfoFunc sets functions that compute values to be added to every health check result.
+// It works similarly to WithInfo, but allows dynamic computation of values at the time of the health check.
+// Each function receives the `info` map, but any values set by WithInfo will override those computed by
+// WithInfoFunc. In other words, if both WithInfo and WithInfoFunc set the same key, the static values
+// from WithInfo will take precedence over those dynamically computed by WithInfoFunc.
+// Values added by these functions will still be available in CheckerResult.Info and reflected in the
+// "info" field if you are using the default HTTP handler (see NewHandler) or converting CheckerResult to JSON.
+// The functions will be executed in order.
+func WithInfoFunc(infoFuncs ...func(info map[string]any)) CheckerOption {
+	return func(cfg *checkerConfig) {
+		cfg.infoFuncs = infoFuncs
 	}
 }

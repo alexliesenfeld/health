@@ -7,6 +7,7 @@ import (
 	"github.com/alexliesenfeld/health/interceptors"
 	"github.com/alexliesenfeld/health/middleware"
 	"log"
+	"math/rand"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -50,6 +51,11 @@ func main() {
 		health.WithInfo(map[string]any{
 			"version":     "v0.0.8",
 			"environment": "production",
+		}),
+
+		// Set service information that must be computed dynamically.
+		health.WithInfoFunc(func(info map[string]any) {
+			info["generated_number"] = rand.Intn(10)
 		}),
 
 		// A simple successFunc to see if a fake database connection is up.

@@ -1,3 +1,10 @@
+## 0.8.1
+### Improvements
+- The configuration option [`WithChecks`](https://pkg.go.dev/github.com/alexliesenfeld/health@v0.8.1#WithChecks)
+  was added. 
+- The configuration option [`WithInfoFunc`](https://pkg.go.dev/github.com/alexliesenfeld/health@v0.8.1#WithInfoFunc)
+  was added.
+
 ## 0.8.0
 ### Breaking Changes
 - [`CheckerResult`](https://github.com/alexliesenfeld/health/blob/8d498ec975b54ec3ef47493bbc22c72884359dc2/check.go#L86C1-L91)s 
