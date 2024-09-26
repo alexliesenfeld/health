@@ -162,8 +162,16 @@ func WithCacheDuration(duration time.Duration) CheckerOption {
 // If health checks are expensive, or you expect a higher amount of requests on the health endpoint,
 // consider using WithPeriodicCheck instead.
 func WithCheck(check Check) CheckerOption {
+	return WithChecks(check)
+}
+
+// WithChecks adds a list of health checks that contribute to the overall service availability status.
+// see. WithCheck for more information.
+func WithChecks(checks ...Check) CheckerOption {
 	return func(cfg *checkerConfig) {
-		cfg.checks[check.Name] = &check
+		for i := range checks {
+			cfg.checks[checks[i].Name] = &checks[i]
+		}
 	}
 }
 
