@@ -125,10 +125,10 @@ func main() {
 		),
 
 		// Set a custom HTTP status code that should be used if the system is considered "up".
-		health.WithStatusCodeUp(200),
+		health.WithStatusCodeUp(http.StatusOK),
 
 		// Set a custom HTTP status code that should be used if the system is considered "down".
-		health.WithStatusCodeDown(503),
+		health.WithStatusCodeDown(http.StatusServiceUnavailable),
 	)
 
 	// We Create a new http.Handler that provides health successFunc information
