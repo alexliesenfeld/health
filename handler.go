@@ -96,8 +96,8 @@ func mapHTTPStatusCode(status AvailabilityStatus, statusCodeUp int, statusCodeDo
 
 func createConfig(options []HandlerOption) HandlerConfig {
 	cfg := HandlerConfig{
-		statusCodeDown: 503,
-		statusCodeUp:   200,
+		statusCodeDown: http.StatusUnavailable,
+		statusCodeUp:   http.StatusOK,
 		middleware:     []Middleware{},
 	}
 
