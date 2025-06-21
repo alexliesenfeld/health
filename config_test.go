@@ -41,6 +41,25 @@ func TestWithCheckConfig(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(&check, cfg.checks[expectedName]))
 }
 
+func TestWithChecksConfig(t *testing.T) {
+	// Arrange
+	expectedNames := []string{"test1", "test2"}
+	cfg := checkerConfig{checks: map[string]*Check{}}
+	checks := []Check{
+		{Name: "test1"},
+		{Name: "test2"},
+	}
+
+	// Act
+	WithChecks(checks...)(&cfg)
+
+	// Assert
+	require.Equal(t, 2, len(cfg.checks))
+	for i, name := range expectedNames {
+		assert.True(t, reflect.DeepEqual(&checks[i], cfg.checks[name]))
+	}
+}
+
 func TestWithCacheDurationConfig(t *testing.T) {
 	// Arrange
 	cfg := checkerConfig{}
@@ -187,4 +206,17 @@ func TestCheckerAutostartDisabledConfig(t *testing.T) {
 
 	// Assert
 	assert.False(t, c.IsStarted())
+}
+
+func TestWithChecks(t *testing.T) {
+	// Arrange
+	check := Check{Name: "test"}
+
+	// Act
+	checker := NewChecker(WithChecks(check))
+
+	// Assert
+	ckr := checker.(*defaultChecker)
+	assert.Len(t, ckr.cfg.checks, 1)
+	assert.Contains(t, ckr.cfg.checks, check.Name)
 }

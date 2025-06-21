@@ -13,6 +13,7 @@ type (
 	checkerConfig struct {
 		timeout              time.Duration
 		info                 map[string]interface{}
+		infoFuncs            []func(map[string]interface{})
 		checks               map[string]*Check
 		cacheTTL             time.Duration
 		statusChangeListener func(context.Context, CheckerState)
@@ -409,7 +410,7 @@ func (ck *defaultChecker) mapStateToCheckerResult() CheckerResult {
 		}
 	}
 
-	return CheckerResult{Status: status, Details: checkResults, Info: ck.cfg.info}
+	return CheckerResult{Status: status, Details: checkResults, Info: createInfoMap(ck.cfg.info, ck.cfg.infoFuncs)}
 }
 
 func isCacheExpired(cacheDuration time.Duration, state *CheckState) bool {
@@ -421,8 +422,13 @@ func isPeriodicCheck(check *Check) bool {
 }
 
 func waitForStopSignal(ctx context.Context, waitTime time.Duration) bool {
+	// We can switch to using time.After should this library only support Go version >= 1.23 in the future.
+	// Meanwhile, we use time.NewTimer (see https://github.com/alexliesenfeld/health/issues/91).
+	timer := time.NewTimer(waitTime)
+	defer timer.Stop()
+
 	select {
-	case <-time.After(waitTime):
+	case <-timer.C:
 		return false
 	case <-ctx.Done():
 		return true
@@ -559,4 +565,33 @@ func withInterceptors(interceptors []Interceptor, target InterceptorFunc) Interc
 	}
 
 	return chain
+}
+
+func createInfoMap(infoMap map[string]interface{}, infoFuncs []func(map[string]interface{})) map[string]interface{} {
+	// TODO: This solution may often create a new map and hence unnecessarily use the heap
+	// 	(the map we return will escape to the heap during escape analysis because the
+	//  size is unknown at compile time). This may be improved by using a check specific
+	//  map that is recycled, so that allocated heap is not wasted and may be reused
+	//  from check execution to check execution (e.g., by cleaning it up after
+	//  the execution using delete(checkSpecificMap, key).
+
+	if len(infoFuncs) == 0 {
+		return infoMap
+	}
+
+	var target map[string]interface{}
+
+	if len(infoMap) > 0 {
+		target = make(map[string]interface{})
+
+		for _, infoFunc := range infoFuncs {
+			infoFunc(target)
+		}
+
+		for k, v := range infoMap {
+			target[k] = v
+		}
+	}
+
+	return target
 }
