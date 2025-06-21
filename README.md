@@ -42,7 +42,12 @@ Rather than simply returning a response with HTTP status code 200, this library 
 that test the availability of all required dependencies. The HTTP response contains the aggregated health result and 
 details about the health status of each component.
 
+### Install
+
+`go get github.com/alexliesenfeld/health`
+
 ### Example
+
 ```go
 package main
 
