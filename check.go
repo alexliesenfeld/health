@@ -422,8 +422,13 @@ func isPeriodicCheck(check *Check) bool {
 }
 
 func waitForStopSignal(ctx context.Context, waitTime time.Duration) bool {
+	// We can switch to using time.After should this library only support Go version >= 1.23 in the future.
+	// Meanwhile, we use time.NewTimer (see https://github.com/alexliesenfeld/health/issues/91).
+	timer := time.NewTimer(waitTime)
+	defer timer.Stop()
+
 	select {
-	case <-time.After(waitTime):
+	case <-timer.C:
 		return false
 	case <-ctx.Done():
 		return true
