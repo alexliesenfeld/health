@@ -1,6 +1,7 @@
 module github.com/alexliesenfeld/health/examples
 
-go 1.21
+go 1.22
+
 toolchain go1.22.5
 
 require (
@@ -10,7 +11,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hellofresh/health-go/v4 v4.7.0
 	github.com/heptiolabs/healthcheck v0.0.0-20180807145615-6ff867650f40
-	github.com/mattn/go-sqlite3 v1.14.23
+	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/sirupsen/logrus v1.9.3
 )
 
