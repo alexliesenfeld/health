@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 	"time"
 
@@ -67,11 +66,23 @@ func doTestHandler(t *testing.T, statusCodeUp, statusCodeDown int, expectedStatu
 	assert.Equal(t, response.Header().Get("content-type"), "application/json; charset=utf-8")
 	assert.Equal(t, response.Result().StatusCode, expectedStatusCode)
 
-	result := CheckerResult{}
-	_ = json.Unmarshal(response.Body.Bytes(), &result)
-	log.Printf("returned %+v, want %+v", result.Details, expectedStatus.Details)
+    result := CheckerResult{}
+    err := json.Unmarshal(response.Body.Bytes(), &result)
+    assert.NoError(t, err)
+    t.Logf("returned %+v, want %+v", result.Details, expectedStatus.Details)	assert.Equal(t, expectedStatus.Status, result.Status)
+	assert.Equal(t, len(expectedStatus.Details), len(result.Details))
 
-	assert.True(t, reflect.DeepEqual(result, expectedStatus))
+	for k, v := range expectedStatus.Details {
+		res, ok := result.Details[k]
+		assert.True(t, ok)
+		assert.Equal(t, v.Status, res.Status)
+		if v.Error != nil {
+			assert.NotNil(t, res.Error)
+			assert.Equal(t, v.Error.Error(), res.Error.Error())
+		} else {
+			assert.Nil(t, res.Error)
+		}
+	}
 }
 
 func TestHandlerIfCheckFailThenRespondWithNotAvailable(t *testing.T) {

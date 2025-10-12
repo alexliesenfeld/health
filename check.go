@@ -137,6 +137,9 @@ type (
 	// AvailabilityStatus expresses the availability of either
 	// a component or the whole system.
 	AvailabilityStatus string
+
+	// PanicHandler is a function that is called when a panic occurs during a check.
+	PanicHandler func(interface{})
 )
 
 const (
@@ -182,13 +185,19 @@ func (cr *CheckResult) UnmarshalJSON(data []byte) error {
 }
 
 func (s AvailabilityStatus) criticality() int {
+	const (
+		statusCriticalityDown    = 2
+		statusCriticalityUnknown = 1
+		statusCriticalityUp      = 0
+	)
+
 	switch s {
 	case StatusDown:
-		return 2
+		return statusCriticalityDown
 	case StatusUnknown:
-		return 1
+		return statusCriticalityUnknown
 	default:
-		return 0
+		return statusCriticalityUp
 	}
 }
 
@@ -484,8 +493,9 @@ func executeCheckFunc(ctx context.Context, check *Check) error {
 		defer func() {
 			if !check.DisablePanicRecovery {
 				if r := recover(); r != nil {
-					// TODO: Provide a configurable panic handler configuration option, so developers can decide
-					// 	what to do with panics.
+					if cfg.panicHandler != nil {
+						cfg.panicHandler(r)
+					}
 					err, ok := r.(error)
 					if ok {
 						res <- err
@@ -568,29 +578,20 @@ func withInterceptors(interceptors []Interceptor, target InterceptorFunc) Interc
 }
 
 func createInfoMap(infoMap map[string]interface{}, infoFuncs []func(map[string]interface{})) map[string]interface{} {
-	// TODO: This solution may often create a new map and hence unnecessarily use the heap
-	// 	(the map we return will escape to the heap during escape analysis because the
-	//  size is unknown at compile time). This may be improved by using a check specific
-	//  map that is recycled, so that allocated heap is not wasted and may be reused
-	//  from check execution to check execution (e.g., by cleaning it up after
-	//  the execution using delete(checkSpecificMap, key).
-
 	if len(infoFuncs) == 0 {
 		return infoMap
 	}
 
-	var target map[string]interface{}
+	// Pre-allocate map. We don't know the exact number of items that will be added by info funcs,
+	// so we just allocate for the static info map.
+	target := make(map[string]interface{}, len(infoMap))
 
-	if len(infoMap) > 0 {
-		target = make(map[string]interface{})
+	for _, infoFunc := range infoFuncs {
+		infoFunc(target)
+	}
 
-		for _, infoFunc := range infoFuncs {
-			infoFunc(target)
-		}
-
-		for k, v := range infoMap {
-			target[k] = v
-		}
+	for k, v := range infoMap {
+		target[k] = v
 	}
 
 	return target
