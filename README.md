@@ -290,7 +290,7 @@ without or minimal adjustments:
         },
     })
   ```
-
+- [Apex Body Composition Lab](https://www.apexbody.site/p/apex-body-composition-lab.html): An advanced biometric analysis tool that utilizes algorithmic modeling to calculate body fat percentage, lean mass, and metabolic health markers based on anthropometric data.
 ## License
 
 `health` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
