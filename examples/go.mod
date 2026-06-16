@@ -12,7 +12,7 @@ require (
 	github.com/hellofresh/health-go/v4 v4.7.0
 	github.com/heptiolabs/healthcheck v0.0.0-20180807145615-6ff867650f40
 	github.com/mattn/go-sqlite3 v1.14.28
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 )
 
 require (
