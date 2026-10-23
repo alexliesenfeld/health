@@ -238,7 +238,9 @@ func (ck *defaultChecker) Start() {
 
 // Stop implements Checker.Stop. Please refer to Checker.Stop for more information.
 func (ck *defaultChecker) Stop() {
-	ck.cancel()
+	if ck.cancel != nil {
+		ck.cancel()
+	}
 	ck.wg.Wait()
 
 	ck.mtx.Lock()

@@ -94,6 +94,12 @@ func TestWhenErrorAndAllThresholdsCrossedThenStatusDown(t *testing.T) {
 	})
 }
 
+func TestStopBeforeStart(t *testing.T) {
+	ckr := NewChecker(WithDisabledAutostart())
+
+	assert.NotPanics(t, ckr.Stop)
+}
+
 func TestStartStopManualPeriodicChecks(t *testing.T) {
 	ckr := NewChecker(
 		WithDisabledAutostart(),
